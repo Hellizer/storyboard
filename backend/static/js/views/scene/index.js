@@ -1,11 +1,13 @@
 /**
  * Экран генерации сцены.
- * Координирует prompt, preview, history, tabs.
+ * Координирует prompt, preview, history, tabs, cubes.
  */
 import { api } from '../../core/api.js';
 import { $ } from '../../infra/dom.js';
 import { openPanelForScene, closePanel } from '../../components/panel.js';
 import { generation } from '../../core/generation.js';
+import { initCubeEditor } from '../../components/cube_editor.js';
+import { confirmDialog } from '../../infra/dialogs.js';
 
 import { initTabs, setActiveTab } from './tabs.js';
 import {
@@ -18,6 +20,8 @@ import {
   setHistoryContext, setHistoryCallbacks, setActiveHistoryId,
   loadAndRenderHistory, renderHistoryStrip, getHistoryEntry,
 } from './history.js';
+import { initCubes, showCubes } from './cubes.js';
+import { initChatPanel, showChat } from '../../components/chat_panel.js';
 import { pickSeed } from './utils.js';
 
 let currentSceneId = null;
@@ -64,6 +68,16 @@ export async function showSceneGeneration(projectName, sceneId, dependencies) {
   setHistoryContext(deps.getProjectName(), sceneId, deps);
   setActiveHistoryId(activeHistoryId);
   await loadAndRenderHistory();
+
+  // Кубики (ленивая загрузка при первом заходе)
+  showCubes();
+
+  // Чат (контекст текущей сцены)
+  showChat({
+    scope: 'scene',
+    project: deps.getProjectName(),
+    scene: sceneId,
+  });
 
   // Статус задачи
   updateSceneStatus(sceneId);
@@ -167,7 +181,13 @@ async function onHistorySelect(entry) {
 
 async function onHistoryDelete(entry) {
   if (!entry || !currentSceneId) return;
-  if (!confirm('Удалить этот вариант?')) return;
+  const ok = await confirmDialog({
+    title: 'Удаление варианта',
+    message: 'Удалить этот вариант?',
+    confirmText: 'Удалить',
+    danger: true,
+  });
+  if (!ok) return;
   try {
     await fetch(
       `/api/projects/${encodeURIComponent(deps.getProjectName())}/scenes/${encodeURIComponent(currentSceneId)}/history/${encodeURIComponent(entry.task_id)}`,
@@ -187,7 +207,6 @@ async function reloadCurrentScene() {
     const fresh = (project.scenes || []).find(s => s.id === currentSceneId);
     if (!fresh) return;
 
-    // Обновляем граф
     if (deps.updateScene) {
       await deps.updateScene(currentSceneId, {
         prompt: fresh.prompt || '',
@@ -196,14 +215,12 @@ async function reloadCurrentScene() {
       });
     }
 
-    // Обновляем UI
     setPromptText(fresh.prompt || '');
     const activeId = fresh.last_image?.history_id || null;
     renderBigPreview(activeId);
     setActiveHistoryId(activeId);
     renderHistoryStrip();
 
-    // Перезагружаем панель настроек
     await openPanelForScene(currentSceneId);
   } catch (e) {
     console.warn('[scene] не удалось перезагрузить сцену:', e);
@@ -239,6 +256,9 @@ export function initSceneGenerationView(navigateBack) {
   initTabs();
   initPrompt();
   initPreview();
+  initCubes();
+  initCubeEditor();
+  initChatPanel();
 
   setHistoryCallbacks(onHistorySelect, onHistoryDelete);
 
@@ -259,12 +279,10 @@ export function initSceneGenerationView(navigateBack) {
     btnGen.addEventListener('click', generate);
   }
 
-  // События generation
   unsubscribers.push(generation.on('task-updated', onTaskEvent));
   unsubscribers.push(generation.on('task-started', onTaskEvent));
   unsubscribers.push(generation.on('task-finished', onTaskEvent));
 
-  // Обновления сцены из панели
   window.addEventListener('scene-updated', (e) => {
     if (e.detail?.sceneId !== currentSceneId) return;
     const scene = deps?.getScene(currentSceneId);

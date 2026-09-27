@@ -85,3 +85,42 @@
   object-fit: contain;
   display: block;
 }
+
+/* ---------- строка «Промпт» + A−/A+ ---------- */
+
+.prompt-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.prompt-label-row label {
+  margin: 0;
+}
+
+.prompt-font-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.prompt-font-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--fg-3);
+  cursor: pointer;
+  padding: 1px 8px;
+  font-size: var(--fz-sm);
+  font-family: var(--font-mono);
+  border-radius: var(--r-sm);
+  line-height: 1.4;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+.prompt-font-btn:hover:not(:disabled) {
+  background: var(--bg-4);
+  color: var(--fg-0);
+  border-color: var(--border-hi);
+}
+.prompt-font-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

@@ -4,6 +4,8 @@
  */
 import { api } from '../core/api.js';
 import { $ } from '../infra/dom.js';
+import { confirmDialog, alertDialog, promptDialog } from '../infra/dialogs.js';
+import { toast } from '../infra/toast.js';
 
 let currentPresetName = null;  // какой пресет сейчас открыт в форме
 let allPresets = [];
@@ -81,13 +83,6 @@ async function loadComfyLists(force = false) {
     }
 }
 
-/**
- * Заполнить select опциями + опция "(не выбрано)".
- * @param {HTMLSelectElement} sel
- * @param {Array<string>} items
- * @param {string} currentValue
- * @param {string} emptyLabel
- */
 function fillSelect(sel, items, currentValue, emptyLabel = "(не выбрано)") {
   sel.innerHTML = '';
   const emptyOpt = document.createElement('option');
@@ -104,7 +99,6 @@ function fillSelect(sel, items, currentValue, emptyLabel = "(не выбрано
     if (item === currentValue) found = true;
   }
 
-  // Если текущее значение не в списке — добавим его как отдельную опцию
   if (currentValue && !found) {
     const opt = document.createElement('option');
     opt.value = currentValue;
@@ -118,12 +112,10 @@ function fillSelect(sel, items, currentValue, emptyLabel = "(не выбрано
 
 /**
  * Открыть модалку управления пресетами.
- * @param {function} onClose — callback при закрытии
  */
 export async function openPresetsManager(onClose = null) {
   currentOnClose = onClose;
 
-  // Загружаем списки из ComfyUI
   await loadComfyLists();
   await loadTemplatesAndAdapters();
   await refreshList();
@@ -204,7 +196,6 @@ function selectPreset(name) {
     $('pmTemplate').value = d.template || 'Scene';
     $('pmAdapter').value = d.adapter || 'anima_base';
 
-    // Заполнить селект модели
     const modelSel = $('pmModel');
     fillSelect(modelSel, comfyCache.models || [], v.unet_name || '',
                '(модель по умолчанию)');
@@ -212,36 +203,34 @@ function selectPreset(name) {
       modelSel.title = 'ComfyUI недоступен: ' + comfyCache.modelsError;
     }
 
-    // Заполнить селект LoRA
     const loraSel = $('pmLoraName');
     fillSelect(loraSel, comfyCache.loras || [], v.lora_name || '',
                '(без LoRA)');
     if (comfyCache.lorasError) {
       loraSel.title = 'ComfyUI недоступен: ' + comfyCache.lorasError;
     }
-    // Заполнить селект шаблонов
-        const tplSel = $('pmTemplate');
-        fillSelect(tplSel, templatesCache, d.template || 'default',
-                   '(выбери шаблон)');
-        if (!templatesCache.length) {
-          tplSel.title = 'Нет шаблонов в backend/templates/';
-        }
 
-        // Заполнить селект адаптеров
-        const adpSel = $('pmAdapter');
-        fillSelect(adpSel, adaptersCache, d.adapter || 'default',
-                   '(выбери адаптер)');
-        if (!adaptersCache.length) {
-          adpSel.title = 'Нет адаптеров в backend/adapters/';
+    const tplSel = $('pmTemplate');
+    fillSelect(tplSel, templatesCache, d.template || 'default',
+               '(выбери шаблон)');
+    if (!templatesCache.length) {
+      tplSel.title = 'Нет шаблонов в backend/templates/';
     }
-//семплер и шедулер
-        const samplerSel = $('pmSamplerName');
-        fillSelect(samplerSel, comfyCache.samplers || [],
-                   v.sampler_name || 'euler', '(по умолчанию)');
 
-        const schedulerSel = $('pmScheduler');
-        fillSelect(schedulerSel, comfyCache.schedulers || [],
-                   v.scheduler || 'normal', '(по умолчанию)');
+    const adpSel = $('pmAdapter');
+    fillSelect(adpSel, adaptersCache, d.adapter || 'default',
+               '(выбери адаптер)');
+    if (!adaptersCache.length) {
+      adpSel.title = 'Нет адаптеров в backend/adapters/';
+    }
+
+    const samplerSel = $('pmSamplerName');
+    fillSelect(samplerSel, comfyCache.samplers || [],
+               v.sampler_name || 'euler', '(по умолчанию)');
+
+    const schedulerSel = $('pmScheduler');
+    fillSelect(schedulerSel, comfyCache.schedulers || [],
+               v.scheduler || 'normal', '(по умолчанию)');
 
     $('pmSteps').value = v.steps ?? 14;
     $('pmCfg').value = v.cfg ?? 1.5;
@@ -259,41 +248,61 @@ function selectPreset(name) {
 async function importWorkflow() {
   const templateName = $('pmTemplate').value;
   if (!templateName) {
-    alert('Сначала выбери шаблон');
+    await alertDialog({
+      title: 'Импорт workflow',
+      message: 'Сначала выбери шаблон.',
+    });
     return;
   }
 
   const adapterExists = adaptersCache.includes(templateName);
   if (adapterExists) {
-    if (!confirm(`Адаптер для «${templateName}» уже существует. Перезаписать?`)) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: 'Перезапись адаптера',
+      message: `Адаптер для «${templateName}» уже существует. Перезаписать?`,
+      confirmText: 'Перезаписать',
+      danger: true,
+    });
+    if (!ok) return;
   }
 
   try {
     const result = await api.workflow.import(templateName, adapterExists);
-    alert(`Импорт успешен.\n\nНайдено: ${result.import_info.found.length}\nПропущено: ${result.import_info.missing.length}`);
+    await alertDialog({
+      title: 'Импорт завершён',
+      message: `Найдено узлов: ${result.import_info.found.length}\n` +
+               `Пропущено: ${result.import_info.missing.length}`,
+    });
     await loadTemplatesAndAdapters();
-    // Обновляем селект адаптеров
     const adpSel = $('pmAdapter');
     fillSelect(adpSel, adaptersCache, templateName, '(выбери адаптер)');
   } catch (e) {
-    alert('Ошибка импорта: ' + e.message);
+    await alertDialog({
+      title: 'Ошибка импорта',
+      message: e.message,
+    });
   }
 }
 
 async function createNewPreset() {
-  const name = prompt('Имя нового пресета:', 'My Preset 2');
+  const name = await promptDialog({
+    title: 'Новый пресет',
+    message: 'Имя нового пресета:',
+    defaultValue: 'My Preset 2',
+    confirmText: 'Создать',
+  });
   if (!name) return;
   const trimmed = name.trim();
   if (!trimmed) return;
 
   if (allPresets.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
-    alert('Пресет с таким именем уже существует');
+    await alertDialog({
+      title: 'Пресет уже существует',
+      message: `Пресет с именем «${trimmed}» уже есть.`,
+    });
     return;
   }
 
-  // Пустой пресет с дефолтами
   const empty = {
     template: 'Scene',
     adapter: 'anima_base',
@@ -313,8 +322,12 @@ async function createNewPreset() {
     await api.presets.save(trimmed, empty);
     await refreshList();
     selectPreset(trimmed);
+    toast.success(`Пресет «${trimmed}» создан`);
   } catch (e) {
-    alert('Ошибка создания: ' + e.message);
+    await alertDialog({
+      title: 'Ошибка создания',
+      message: e.message,
+    });
   }
 }
 
@@ -358,10 +371,13 @@ async function saveCurrentPreset() {
     },
   };
 
+  const oldName = currentPresetName;
+  const renamed = newName !== oldName;
+
   try {
-    if (newName !== currentPresetName) {
+    if (renamed) {
       await api.presets.save(newName, payload);
-      await api.presets.delete(currentPresetName);
+      await api.presets.delete(oldName);
       currentPresetName = newName;
     } else {
       await api.presets.save(newName, payload);
@@ -369,24 +385,32 @@ async function saveCurrentPreset() {
 
     await refreshList();
     selectPreset(currentPresetName);
-    $('pmError').textContent = 'Сохранено';
-    $('pmError').style.color = '#8c8';
-    setTimeout(() => {
-      $('pmError').textContent = '';
-      $('pmError').style.color = '#ff8888';
-    }, 1500);
+
+    toast.success(
+      renamed
+        ? `Пресет «${oldName}» переименован в «${newName}»`
+        : `Пресет «${newName}» сохранён`
+    );
   } catch (e) {
     $('pmError').textContent = e.message;
     $('pmError').style.color = '#ff8888';
+    toast.error('Не удалось сохранить пресет: ' + e.message);
   }
 }
 
 async function deleteCurrentPreset() {
   if (currentPresetName === null) return;
-  if (!confirm(`Удалить пресет «${currentPresetName}»?`)) return;
+  const nameToDelete = currentPresetName;
+  const ok = await confirmDialog({
+    title: 'Удаление пресета',
+    message: `Удалить пресет «${nameToDelete}»?`,
+    confirmText: 'Удалить',
+    danger: true,
+  });
+  if (!ok) return;
 
   try {
-    await api.presets.delete(currentPresetName);
+    await api.presets.delete(nameToDelete);
     currentPresetName = null;
     await refreshList();
     if (allPresets.length > 0) {
@@ -394,14 +418,15 @@ async function deleteCurrentPreset() {
     } else {
       selectPreset(null);
     }
+    toast.success(`Пресет «${nameToDelete}» удалён`);
   } catch (e) {
-    alert('Ошибка удаления: ' + e.message);
+    await alertDialog({
+      title: 'Ошибка удаления',
+      message: e.message,
+    });
   }
 }
 
-/**
- * Инициализация обработчиков. Вызывается один раз при старте.
- */
 export function initPresetsManager() {
   const modal = $('presetsManagerModal');
   if (!modal) return;

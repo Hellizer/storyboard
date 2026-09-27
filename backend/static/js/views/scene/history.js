@@ -63,6 +63,17 @@ export function renderHistoryStrip() {
       ${inner}
       <button class="history-item-delete" title="Удалить">✕</button>
     `;
+    // Drag&drop в чат: переносим {kind:'scene_image', name:'<task_id>.png'}
+    if (hasImage) {
+      el.draggable = true;
+      el.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData(
+          'application/x-storyboard-image',
+          JSON.stringify({ kind: 'scene_image', name: `${entry.task_id}.png` })
+        );
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+    }
 
     el.addEventListener('click', (ev) => {
       if (ev.target.classList.contains('history-item-delete')) return;

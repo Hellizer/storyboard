@@ -328,6 +328,21 @@ async def select_history_image(name: str, scene_id: str, history_id: str):
     )
     return {"ok": True}
 
+# ---------------------------------------------------------------------------
+# Файлы, вставленные в чат (Ctrl+V / из буфера / drag&drop из ОС)
+# ---------------------------------------------------------------------------
+
+@router.get("/{name}/scenes/{scene_id}/chat_uploads/{filename}")
+async def get_chat_upload(name: str, scene_id: str, filename: str):
+    name = unquote(name)
+    # защита от path traversal
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(400, "invalid filename")
+    path = _project_dir(name) / "scenes" / scene_id / "chat_uploads" / filename
+    if not path.exists():
+        raise HTTPException(404, "upload not found")
+    return FileResponse(path)
+
 @router.delete("/{name}")
 async def delete_project(name: str):
     name = unquote(name)

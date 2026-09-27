@@ -27,3 +27,4 @@ echo "[Storyboard] Press Ctrl+C to stop."
 echo
 cd backend
 exec $PY main.py
+

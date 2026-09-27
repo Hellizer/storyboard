@@ -24,9 +24,13 @@ USER_DIR = Path(_home_override).expanduser() if _home_override else Path.home() 
 PROJECTS_DIR = USER_DIR / "projects"
 USER_PRESETS_DIR = USER_DIR / "presets"
 CONFIG_FILE = USER_DIR / "config.json"
+CUBES_FILE = USER_DIR / "cubes.json"
 
 # ComfyUI по умолчанию
 DEFAULT_COMFY_URL = "http://localhost:8188"
+
+# llama-server по умолчанию (OpenAI-совместимый API)
+DEFAULT_LLAMA_URL = "http://localhost:8080"
 
 # Порт нашего бэкенда
 PORT = int(os.environ.get("STORYBOARD_PORT", "9000"))
@@ -87,6 +91,10 @@ def get_comfy_url() -> str:
     cfg = load_user_config()
     return cfg.get("comfy_url", DEFAULT_COMFY_URL)
 
+def get_llama_url() -> str:
+    """Вернуть URL llama-server: из конфига или дефолт."""
+    cfg = load_user_config()
+    return cfg.get("llama_url", DEFAULT_LLAMA_URL)
 
 def list_presets() -> list[str]:
     """Список пресетов — только из пользовательской папки."""

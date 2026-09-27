@@ -10,6 +10,11 @@
 @import url("components/tabs.css");
 @import url("components/queue.css");
 @import url("components/history.css");
+@import url("components/presets.css");
+@import url("components/cubes.css");
+@import url("components/dialogs.css");
+@import url("components/toast.css");
+@import url("components/chat.css");
 
 @import url("views/projects.css");
 @import url("views/graph.css");

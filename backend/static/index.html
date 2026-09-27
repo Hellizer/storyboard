@@ -87,9 +87,15 @@
     <!-- Основная колонка -->
     <div class="main-col">
       <div class="row">
-        <div class="col-left">
-          <label>Промпт</label>
-          <textarea id="genScenePrompt" placeholder="что рисуем..."></textarea>
+          <div class="col-left">
+            <div class="prompt-label-row">
+              <label>Промпт</label>
+              <div class="prompt-font-controls">
+                <button type="button" class="prompt-font-btn" id="btnPromptFontDec" title="Меньше">A−</button>
+                <button type="button" class="prompt-font-btn" id="btnPromptFontInc" title="Больше">A+</button>
+              </div>
+            </div>
+            <textarea id="genScenePrompt" placeholder="что рисуем..."></textarea>
 
           <label>Seed</label>
           <div class="seed-row">
@@ -120,18 +126,34 @@
             </div>
 
             <div class="scene-tab-pane" data-tab="chat">
-              <div class="tab-placeholder">
-                <div class="tab-placeholder-icon">💬</div>
-                <div class="tab-placeholder-title">Чат с LLM</div>
-                <div class="tab-placeholder-hint">в разработке</div>
+              <div class="chat-panel" id="chatPanel">
+                <div class="chat-header">
+                  <button class="icon-btn" id="chatHeaderThinking" title="Думать (reasoning)">🧠</button>
+                  <button class="icon-btn" id="chatHeaderClear" title="Очистить чат">🗑</button>
+                </div>
+
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <div class="chat-footer">
+                  <div class="chat-attachments" id="chatAttachments" style="display:none;"></div>
+                  <div class="chat-input-row">
+                    <textarea class="chat-input" id="chatInput" placeholder="сообщение... (Enter — отправить, Shift+Enter — перенос, Ctrl+V — картинка)"></textarea>
+                    <button class="chat-btn primary" id="chatSend" title="Отправить">➤</button>
+                    <button class="chat-btn danger" id="chatStop" style="display:none;" title="Остановить">■</button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="scene-tab-pane" data-tab="cubes">
-              <div class="tab-placeholder">
-                <div class="tab-placeholder-icon">🧩</div>
-                <div class="tab-placeholder-title">Библиотека кубиков</div>
-                <div class="tab-placeholder-hint">в разработке</div>
+              <div class="cubes-pane">
+                <div class="cubes-toolbar">
+                  <input type="text" id="cubesSearch" class="cubes-search" placeholder="Поиск по имени и тексту...">
+                  <button class="icon-btn primary small" id="btnCubeCreate" title="Новый кубик">+</button>
+                  <button class="icon-btn small" id="btnCubesRefresh" title="Обновить список">🔄</button>
+                </div>
+                <div class="cubes-categories" id="cubesCategories"></div>
+                <div class="cubes-list" id="cubesList"></div>
               </div>
             </div>
           </div>
@@ -437,6 +459,77 @@
   </div>
 </div>
 
+<!-- ==================== МОДАЛКА: РЕДАКТОР КУБИКА ==================== -->
+<div class="modal-backdrop" id="cubeEditorModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <h2 id="cubeEditorTitle">Новый кубик</h2>
+      <button class="icon-btn" id="btnCubeEditorClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Название</label>
+        <input id="cubeName" type="text" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+              <label>Категория</label>
+              <select id="cubeCategorySelect"></select>
+            </div>
+
+            <div class="form-group" id="cubeCategoryNewRow" style="display:none;">
+              <label>Новая категория</label>
+              <input id="cubeCategoryNew" type="text" autocomplete="off" placeholder="character">
+              <div class="hint">Одно слово. Запятые и точки с запятой запрещены.</div>
+            </div>
+
+      <div class="form-group">
+        <label>Тип</label>
+        <div class="cube-type-row">
+          <label class="radio">
+            <input type="radio" name="cubeType" value="simple" checked>
+            <span>Простой (текст)</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="cubeType" value="composite">
+            <span>Мульти (композиция)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" id="cubeTextGroup">
+        <label>Текст</label>
+        <textarea id="cubeText" class="small" placeholder="dark brown hair, straight hair..."></textarea>
+      </div>
+
+      <div class="form-group" id="cubePartsGroup" style="display:none;">
+        <label>Подкубики</label>
+        <div class="cube-parts-list" id="cubePartsList"></div>
+        <div class="hint">Любые кубики, включая мульти. Циклы (А→Б→А) недоступны автоматически.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Цвет</label>
+        <input id="cubeColor" type="color" style="height:36px; padding:2px; max-width:120px;">
+      </div>
+
+      <div class="form-group">
+        <label class="cube-editor-checkbox">
+          <input type="checkbox" id="cubePinned">
+          <span>Закрепить</span>
+        </label>
+      </div>
+
+      <div class="error-msg" id="cubeEditorError"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="icon-btn danger" id="btnCubeDelete" style="margin-right:auto; display:none;">🗑 Удалить</button>
+      <button class="icon-btn" id="btnCubeCancel">Отмена</button>
+      <button class="icon-btn primary" id="btnCubeSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== МОДАЛКА: ПОЛНЫЙ РАЗМЕР ==================== -->
 <div class="modal-backdrop image-viewer-backdrop" id="imageViewerModal">
   <div class="image-viewer">
@@ -445,6 +538,6 @@
   </div>
 </div>
 
-<script type="module" src="/static/js/main.js?v=5"></script>
+<script type="module" src="/static/js/main.js?v=6"></script>
 </body>
 </html>

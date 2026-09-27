@@ -6,6 +6,7 @@
  *   api.queue      — очередь задач (глобальная, живёт на бэкенде)
  *   api.workflow   — шаблоны, адаптеры, импорт
  *   api.presets    — CRUD пресетов
+ *   api.cubes      — CRUD кубиков
  *   api.projects   — CRUD проектов
  */
 
@@ -118,6 +119,44 @@ export const api = {
 
 
   // ============================================================
+  // Кубики
+  // ============================================================
+  cubes: {
+    list: () => request("GET", "/api/cubes"),
+
+    create: (payload) => request("POST", "/api/cubes", payload),
+
+    update: (id, payload) =>
+      request("PUT", `/api/cubes/${encodeURIComponent(id)}`, payload),
+
+    delete: (id) =>
+      request("DELETE", `/api/cubes/${encodeURIComponent(id)}`),
+
+    touch: (id) =>
+      request("POST", `/api/cubes/${encodeURIComponent(id)}/touch`),
+  },
+
+  // ============================================================
+  // Чат с LLM
+  // ============================================================
+  chat: {
+    history: (scope, project = null, scene = null) => {
+      const p = new URLSearchParams({ scope });
+      if (project) p.set("project", project);
+      if (scene) p.set("scene", scene);
+      return request("GET", `/api/chat/history?${p}`);
+    },
+
+    clear: (scope, project = null, scene = null) => {
+      const p = new URLSearchParams({ scope });
+      if (project) p.set("project", project);
+      if (scene) p.set("scene", scene);
+      return request("POST", `/api/chat/clear?${p}`);
+    },
+  },
+
+
+  // ============================================================
   // Проекты
   // ============================================================
   projects: {
@@ -164,4 +203,12 @@ export function comfyViewUrl(img) {
 export function openAppWs() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return new WebSocket(`${proto}//${location.host}/ws/app`);
+}
+
+/**
+ * Открыть WS для чата с LLM.
+ */
+export function openChatWs() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  return new WebSocket(`${proto}//${location.host}/ws/chat`);
 }

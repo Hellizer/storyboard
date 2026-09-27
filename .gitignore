@@ -1,4 +1,4 @@
-# Пользовательские проекты
+# Пользовательские проекты (устаревшая папка, проекты в ~/.storyboard/)
 projects/
 
 # Python
@@ -20,3 +20,10 @@ env/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Модели и движки — вне репо
+*.gguf
+*.safetensors
+llama.cpp/
+comfyui/
+ComfyUI/

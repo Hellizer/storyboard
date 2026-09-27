@@ -20,6 +20,8 @@ from routes import comfy as comfy_routes
 from routes import projects as projects_routes
 from routes import presets as presets_routes
 from routes import workflow as workflow_routes
+from routes import cubes as cubes_routes
+from routes import chat as chat_routes
 
 
 config.ensure_dirs()
@@ -92,6 +94,9 @@ app.include_router(comfy_routes.router)
 app.include_router(projects_routes.router)
 app.include_router(presets_routes.router)
 app.include_router(workflow_routes.router)
+app.include_router(cubes_routes.router)
+app.include_router(chat_routes.router)
+app.include_router(chat_routes.ws_router)
 
 
 if __name__ == "__main__":
