@@ -38,8 +38,8 @@ function buildTaskEl(task) {
 
   // Превью
   let thumbHtml = '';
-  if (task.image && task.image.filename) {
-    const url = `/api/comfy/view?filename=${encodeURIComponent(task.image.filename)}&subfolder=${encodeURIComponent(task.image.subfolder || '')}&type_=${task.image.type || 'output'}`;
+  if (task.image && task.image.history_id && task.projectName && task.sceneId) {
+    const url = `/api/projects/${encodeURIComponent(task.projectName)}/scenes/${encodeURIComponent(task.sceneId)}/history/${encodeURIComponent(task.image.history_id)}/image`;
     thumbHtml = `<img src="${url}" alt="">`;
   } else if (task.status === 'running') {
     thumbHtml = '<span>⚙</span>';

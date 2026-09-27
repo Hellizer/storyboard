@@ -7,6 +7,7 @@ import {
 import { openPresetsManager } from '../presets_manager.js';
 import { SceneGraph } from '../graph.js';
 import { navigate } from '../router.js';
+import { generation } from '../generation.js';
 
 let currentProject = null;
 let graph = null;
@@ -38,13 +39,16 @@ export async function showProject(encodedName) {
   if (!graph) {
     const canvas = $('graphCanvas');
     graph = new SceneGraph(canvas, {
-      onOpenScene: openSceneEditor,
-      onChange: scheduleSave,
-      onCreateScene: (scene) => openSceneEditor(scene.id),
-    });
+          onOpenScene: openSceneEditor,
+          onChange: scheduleSave,
+          onCreateScene: (scene) => openSceneEditor(scene.id),
+          projectName: currentProject.name,
+        });
   }
 
   graph.setData(currentProject.scenes || [], currentProject.edges || []);
+  graph.projectName = currentProject.name;
+
   graph.centerView();
 }
 
@@ -184,7 +188,23 @@ export function initProjectView() {
       await reloadProjectPresetSelect();
     });
   });
+  // Подписка на обновления сцен из очереди
+    window.addEventListener('scene-changed', (e) => {
+      if (!graph) return;
+      const { projectName, sceneId, last_image } = e.detail;
+      if (currentProject && projectName !== currentProject.name) return;
+      if (!graph.getScene(sceneId)) return;
 
+      graph.updateScene(sceneId, { last_image });
+    });
+    generation.on('scene-changed', (e) => {
+      if (!graph) return;
+      const { projectName, sceneId, last_image } = e;
+      if (currentProject && projectName !== currentProject.name) return;
+      const scene = graph.getScene(sceneId);
+      if (!scene) return;
+      graph.updateScene(sceneId, { last_image });
+    });
   // Escape закрывает модалку сцены
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {

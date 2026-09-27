@@ -3,14 +3,27 @@
 Подписана на ComfyClient, свои изменения рассылает подписчикам (WS /ws/app).
 """
 import asyncio
+import copy
 import json
 import time
 from typing import Optional
 
-from comfy import comfy
 import config
+from comfy import comfy
 from config import TEMPLATES_DIR, ADAPTERS_DIR, PROJECTS_DIR
 from workflow_apply import apply_adapter
+
+
+def replace_save_with_preview(workflow: dict) -> dict:
+    """Меняет все SaveImage на PreviewImage. Файлы не пишутся в ComfyUI/output."""
+    wf = copy.deepcopy(workflow)
+    for nid, node in wf.items():
+        if not isinstance(node, dict):
+            continue
+        if node.get("class_type") == "SaveImage":
+            node["class_type"] = "PreviewImage"
+            node["inputs"].pop("filename_prefix", None)
+    return wf
 
 
 class QueueManager:
@@ -21,7 +34,7 @@ class QueueManager:
         self._scene_counters: dict[str, int] = {}
         self._listeners = {}
 
-        # Подписки на ComfyClient
+        # Подписки на события ComfyUI
         comfy.on("progress", self._on_progress)
         comfy.on("executing", self._on_executing)
         comfy.on("executed", self._on_executed)
@@ -44,7 +57,6 @@ class QueueManager:
     # ---------- публичное API ----------
     async def submit(self, project_name: str, scene_id: str, seed=None) -> dict:
         # 1. Читаем проект
-
         project_path = PROJECTS_DIR / project_name / "project.json"
         if not project_path.exists():
             raise ValueError(f"project not found: {project_name}")
@@ -166,19 +178,11 @@ class QueueManager:
             await self._finish_active()
         return ok
 
-    def clear_finished(self):
-        # Пусть будет, но фронт её не дёргает
-        self.tasks = [t for t in self.tasks if t["status"] == "queued" or t is self.active]
-
     # ---------- внутреннее ----------
-    def _build_title(self, data: dict, n: int) -> str:
-        project = data.get("projectName") or "?"
-        scene = data.get("sceneTitle") or "Сцена"
-        return f"{project} · {scene} · #{n}"
-
     async def _run_next(self):
         if self.active:
             return
+
         next_task = None
         for t in self.tasks:
             if t["status"] == "queued":
@@ -207,6 +211,9 @@ class QueueManager:
             adapter = json.loads(adapter_path.read_text(encoding="utf-8"))
             workflow, report = apply_adapter(template, adapter, next_task["values"])
 
+            # SaveImage → PreviewImage (не пишем в ComfyUI/output)
+            workflow = replace_save_with_preview(workflow)
+
             next_task["applied"] = report["applied"]
             next_task["skipped"] = report["skipped"]
         except Exception as e:
@@ -225,7 +232,7 @@ class QueueManager:
             next_task["error"] = f"submit failed: {e}"
             await self._finish_active()
 
-    # ---------- обработчики событий ComfyUI ----------
+    # ---------- обработчики ComfyUI ----------
     async def _on_progress(self, data):
         if not self.active or not data:
             return
@@ -238,6 +245,10 @@ class QueueManager:
     async def _on_executing(self, data):
         if not self.active or not data:
             return
+        # Фильтр по prompt_id, если ComfyUI его отдаёт
+        pid = data.get("prompt_id")
+        if pid and self.active.get("promptId") and pid != self.active["promptId"]:
+            return
         if data.get("node") is None:
             self.active["progress"] = 100
             await self._emit("task-updated", self.active)
@@ -245,17 +256,69 @@ class QueueManager:
     async def _on_executed(self, data):
         if not self.active or not data:
             return
+
+        # Фильтр по prompt_id
+        pid = data.get("prompt_id")
+        if pid and self.active.get("promptId") and pid != self.active["promptId"]:
+            return
+
         imgs = (data.get("output") or {}).get("images") or []
-        if imgs:
-            self.active["image"] = {
-                "filename": imgs[0].get("filename"),
-                "subfolder": imgs[0].get("subfolder", ""),
-                "type": imgs[0].get("type", "output"),
-            }
-            await self._emit("task-updated", self.active)
+        if not imgs:
+            return
+
+        img = imgs[0]
+        filename = img.get("filename")
+        subfolder = img.get("subfolder", "")
+        type_ = img.get("type", "temp")
+
+        # Скачиваем картинку из ComfyUI
+        try:
+            content = await comfy.view_bytes(
+                filename=filename,
+                subfolder=subfolder,
+                type_=type_,
+            )
+        except Exception as e:
+            print(f"[queue] не удалось скачать картинку из ComfyUI: {e}")
+            return
+
+        # Сохраняем в проект
+        from history import history
+        history_id = self.active["id"]
+
+        stored = await history.save_image(
+            project_name=self.active["projectName"],
+            scene_id=self.active["sceneId"],
+            history_id=history_id,
+            image_bytes=content,
+            extension=".png",
+        )
+
+        # Пропорции — из values задачи (какими они были при генерации)
+        v = self.active.get("values") or {}
+        img_meta = {
+            "history_id": history_id,
+            "width": v.get("width", 1152),
+            "height": v.get("height", 896),
+        }
+
+        if stored:
+            img_meta["filename"] = stored["filename"]
+        else:
+            img_meta["filename"] = filename
+            img_meta["subfolder"] = subfolder
+            img_meta["type"] = type_
+
+        self.active["image"] = img_meta
+
+        await self._emit("task-updated", self.active)
 
     async def _on_success(self, data):
         if not self.active:
+            return
+        # Фильтр по prompt_id
+        pid = (data or {}).get("prompt_id")
+        if pid and self.active.get("promptId") and pid != self.active["promptId"]:
             return
         self.active["status"] = "done"
         self.active["progress"] = 100
@@ -272,20 +335,63 @@ class QueueManager:
         finished = self.active
         self.active = None
         finished["finishedAt"] = time.time()
-        await self._emit("task-finished", finished)
 
-        # Хук в историю — заработает, когда history.py появится
+        # Пишем в историю — фронт должен получить событие
+        # только после того, как запись появится на диске
         try:
             from history import history
             await history.append(finished)
-        except ImportError:
-            pass
         except Exception as e:
             print(f"[queue] history write failed: {e}")
+
+        # Обновляем last_image в project.json на бэке — чтобы граф
+        # и любой другой экран сразу видели новую активную картинку,
+        # даже если пользователь не на сцене
+        if finished.get("status") == "done" and finished.get("image"):
+            try:
+                await self._update_scene_last_image(finished)
+            except Exception as e:
+                print(f"[queue] не удалось обновить last_image в сцене: {e}")
+
+        await self._emit("task-finished", finished)
 
         # Следующая задача
         await asyncio.sleep(0.2)
         asyncio.create_task(self._run_next())
 
+    async def _update_scene_last_image(self, task: dict):
+        """Обновить scene.last_image в project.json."""
+        project_name = task.get("projectName")
+        scene_id = task.get("sceneId")
+        image = task.get("image") or {}
+        if not project_name or not scene_id or not image.get("history_id"):
+            return
 
+        project_path = PROJECTS_DIR / project_name / "project.json"
+        if not project_path.exists():
+            return
+
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+        changed = False
+
+        for scene in project.get("scenes", []):
+            if scene.get("id") != scene_id:
+                continue
+            scene["last_image"] = {
+                "history_id": image["history_id"],
+                "width": image.get("width", 1152),
+                "height": image.get("height", 896),
+            }
+            changed = True
+            break
+
+        if changed:
+            project["modified"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
+            project_path.write_text(
+                json.dumps(project, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            
 queue = QueueManager()

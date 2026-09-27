@@ -32,7 +32,7 @@
 ## Установка
 
 ```bash
-git clone https://github.com/hellizer/storyboard.git
+git clone https://github.com/Hellizer/storyboard.git
 cd storyboard
 pip install -r requirements.txt
 ```

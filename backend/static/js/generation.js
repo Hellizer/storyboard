@@ -56,6 +56,21 @@ function handleServerMessage(msg) {
     if (type === 'task-finished') active = null;
     emit(type, data);
     emit('task-updated', data);
+
+    // Отдельное событие — «сцена обновилась извне».
+    // На него подписывается граф и перерисовывает узел.
+    if (type === 'task-finished' && data.status === 'done' &&
+        data.sceneId && data.projectName && data.image?.history_id) {
+      emit('scene-changed', {
+        projectName: data.projectName,
+        sceneId: data.sceneId,
+        last_image: {
+          history_id: data.image.history_id,
+          width: data.image.width || 1152,
+          height: data.image.height || 896,
+        },
+      });
+    }
   } else if (type === 'task-removed') {
     tasks = tasks.filter(t => t.id !== data);
     emit('task-removed', data);

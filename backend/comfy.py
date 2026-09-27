@@ -139,5 +139,15 @@ class ComfyClient:
         self._oi_ts = now
         return self._oi_cache
 
+    async def view_bytes(self, filename: str, subfolder: str = "",
+                         type_: str = "temp") -> bytes:
+        """Скачать картинку из ComfyUI как байты."""
+        r = await self._http.get(
+            f"{self.url}/view",
+            params={"filename": filename, "subfolder": subfolder, "type": type_},
+            timeout=60,
+        )
+        r.raise_for_status()
+        return r.content
 
 comfy = ComfyClient()

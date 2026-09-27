@@ -103,9 +103,14 @@
         </div>
 
         <div class="col-right">
-          <label>Результат</label>
-          <div class="preview" id="genScenePreview">здесь появится картинка</div>
+          <div class="scene-preview-big" id="genScenePreview" title="Клик — открыть в полном размере">
+            здесь появится картинка
+          </div>
           <div class="applied" id="genSceneApplied"></div>
+
+          <div class="scene-history" id="sceneHistory">
+            <div class="scene-history-empty">нет сгенерированных вариантов</div>
+          </div>
         </div>
       </div>
     </div>
@@ -400,6 +405,14 @@
 
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ==================== МОДАЛКА: ПОЛНЫЙ РАЗМЕР ==================== -->
+<div class="modal-backdrop image-viewer-backdrop" id="imageViewerModal">
+  <div class="image-viewer">
+    <button class="icon-btn image-viewer-close" id="btnImageViewerClose">✕</button>
+    <img id="imageViewerImg" alt="">
   </div>
 </div>
 

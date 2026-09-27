@@ -4,12 +4,16 @@
  */
 
 const NODE_RADIUS = 55;
+const NODE_CARD_W = 120;
+const NODE_CARD_H = 90;
 const EDGE_HIT_TOLERANCE = 8;
 
 export class SceneGraph {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+
+    this.projectName = options.projectName || null;
 
     this.scenes = [];
     this.edges = [];
@@ -46,10 +50,11 @@ export class SceneGraph {
   // ---------- Публичное API ----------
 
   setData(scenes, edges) {
-    this.scenes = scenes || [];
-    this.edges = edges || [];
-    this.draw();
-  }
+      this.scenes = scenes || [];
+      this.edges = edges || [];
+      this._ensureThumbs();
+      this.draw();
+    }
 
   getData() {
       return {
@@ -103,6 +108,7 @@ export class SceneGraph {
     const s = this.scenes.find(x => x.id === id);
     if (!s) return;
     Object.assign(s, patch);
+    this._ensureThumbs();
     this.draw();
     this._emitChange();
   }
@@ -402,45 +408,89 @@ export class SceneGraph {
     ctx.restore();
   }
 
+  _ensureThumbs() {
+    for (const scene of this.scenes) {
+      if (scene.last_image && scene.last_image.history_id) {
+        const url = `/api/projects/${encodeURIComponent(this.projectName || '')}/scenes/${encodeURIComponent(scene.id)}/history/${encodeURIComponent(scene.last_image.history_id)}/image`;
+        if (!scene._thumbCache || scene._thumbCache.src !== url) {
+          const img = new Image();
+          img.onload = () => this.draw();
+          img.src = url;
+          scene._thumbCache = img;
+        }
+      }
+    }
+  }
+
   _drawNode(ctx, scene) {
     const isSelected = scene.id === this.selectedId;
+    const hasImage = scene.last_image && scene.last_image.history_id;
 
-    ctx.save();
+    if (hasImage) {
+      // Прямоугольник с превью.
+      // Пропорции — из last_image (как было при генерации),
+      // а не из текущих local_values (их могли поменять).
+      const li = scene.last_image || {};
+      const w = li.width || 1152;
+      const h = li.height || 896;
 
-    // Круг
-    ctx.beginPath();
-    ctx.arc(scene.x, scene.y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = isSelected ? '#2d4a6a' : '#2a2a38';
-    ctx.fill();
-    ctx.strokeStyle = isSelected ? '#4a8aca' : '#4a4a5a';
-    ctx.lineWidth = (isSelected ? 3 : 2) / this.scale;
-    ctx.stroke();
+      let cardW, cardH;
+      if (w > h) { cardW = 120; cardH = 90; }
+      else if (w < h) { cardW = 90; cardH = 120; }
+      else { cardW = 120; cardH = 120; }
 
-    // Превью (если есть — потом)
-    // Пока — заглушка
-    // …
+      const x0 = scene.x - cardW / 2;
+      const y0 = scene.y - cardH / 2;
 
-    // Название
-    const title = scene.title || 'Сцена';
-    ctx.font = `${12 / this.scale}px 'Segoe UI', sans-serif`;
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+      // Фон
+      ctx.save();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(x0, y0, cardW, cardH);
 
-    const maxLen = 14;
-    const display = title.length > maxLen
-      ? title.slice(0, maxLen - 1) + '…'
-      : title;
-    ctx.fillText(display, scene.x, scene.y);
+      // Превью (если закешировано)
+      if (scene._thumbCache && scene._thumbCache.complete && scene._thumbCache.naturalWidth > 0) {
+        ctx.drawImage(scene._thumbCache, x0, y0, cardW, cardH);
+      }
 
-    // Иконка-индикатор статуса
-    // Индикатор: настроена ли сцена
-    ctx.beginPath();
-    ctx.arc(scene.x, scene.y + 22, 4, 0, Math.PI * 2);
-    ctx.fillStyle = scene.configured ? '#5a5' : '#666';
-    ctx.fill();
+      // Рамка
+      ctx.strokeStyle = isSelected ? '#4a8aca' : '#4a4a5a';
+      ctx.lineWidth = (isSelected ? 3 : 2) / this.scale;
+      ctx.strokeRect(x0, y0, cardW, cardH);
 
-    ctx.restore();
+      // Название снизу
+      ctx.font = `${10 / this.scale}px 'Segoe UI', sans-serif`;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      const title = scene.title || 'Сцена';
+      const maxLen = 16;
+      const display = title.length > maxLen ? title.slice(0, maxLen - 1) + '…' : title;
+      ctx.fillText(display, scene.x, y0 + cardH + 4 / this.scale);
+
+      ctx.restore();
+    } else {
+      // Круг с названием
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(scene.x, scene.y, NODE_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = isSelected ? '#2d4a6a' : '#2a2a38';
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? '#4a8aca' : '#4a4a5a';
+      ctx.lineWidth = (isSelected ? 3 : 2) / this.scale;
+      ctx.stroke();
+
+      ctx.font = `${12 / this.scale}px 'Segoe UI', sans-serif`;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const title = scene.title || 'Сцена';
+      const maxLen = 14;
+      const display = title.length > maxLen ? title.slice(0, maxLen - 1) + '…' : title;
+      ctx.fillText(display, scene.x, scene.y);
+      ctx.restore();
+    }
   }
 
   _drawEdge(ctx, edge) {

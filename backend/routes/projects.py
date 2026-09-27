@@ -10,6 +10,8 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import FileResponse
+from history import history
 
 from config import PROJECTS_DIR
 
@@ -192,6 +194,139 @@ async def update_project(name: str, req: UpdateProjectRequest):
 
     return project
 
+# ---------------------------------------------------------------------------
+# История сцены
+# ---------------------------------------------------------------------------
+
+@router.get("/{name}/scenes/{scene_id}/history")
+async def get_scene_history(name: str, scene_id: str):
+    name = unquote(name)
+    return history.get_all(name, scene_id)
+
+
+@router.get("/{name}/scenes/{scene_id}/history/{history_id}/image")
+async def get_history_image(name: str, scene_id: str, history_id: str):
+    name = unquote(name)
+    path = history.image_path(name, scene_id, history_id)
+    if path is None or not path.exists():
+        raise HTTPException(404, "image not found")
+    return FileResponse(path, media_type="image/png")
+
+
+@router.delete("/{name}/scenes/{scene_id}/history/{history_id}")
+async def delete_history_entry(name: str, scene_id: str, history_id: str):
+    name = unquote(name)
+
+    # Запомним, был ли этот вариант активным
+    pjson = _project_dir(name) / "project.json"
+    was_active = False
+    if pjson.exists():
+        project = json.loads(pjson.read_text(encoding="utf-8"))
+        for scene in project.get("scenes", []):
+            if scene.get("id") != scene_id:
+                continue
+            li = scene.get("last_image") or {}
+            if li.get("history_id") == history_id:
+                was_active = True
+            break
+
+    ok = await history.delete(name, scene_id, history_id)
+    if not ok:
+        raise HTTPException(404, "history entry not found")
+
+    # Если удалили активный вариант — выбираем следующий по свежести
+    if was_active and pjson.exists():
+        project = json.loads(pjson.read_text(encoding="utf-8"))
+        remaining = history.get_all(name, scene_id)  # свежие сверху
+        next_entry = remaining[0] if remaining else None
+
+        for scene in project.get("scenes", []):
+            if scene.get("id") != scene_id:
+                continue
+            if next_entry is not None:
+                next_image = next_entry.get("image") or {}
+                next_values = next_entry.get("values") or {}
+                scene["last_image"] = {
+                    "history_id": next_entry["task_id"],
+                    "width": next_image.get("width", next_values.get("width", 1152)),
+                    "height": next_image.get("height", next_values.get("height", 896)),
+                }
+                values = next_entry.get("values") or {}
+                if "prompt" in values:
+                    scene["prompt"] = values["prompt"]
+                lv = dict(values)
+                lv.pop("prompt", None)
+                lv.pop("filename_prefix", None)
+                scene["local_values"] = lv
+            else:
+                # Нет больше вариантов — превью пустое,
+                # но prompt/local_values оставляем от последнего
+                scene["last_image"] = None
+            break
+
+        project["modified"] = datetime.utcnow().isoformat() + "Z"
+        pjson.write_text(
+            json.dumps(project, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    return {"ok": True}
+
+class SelectHistoryRequest(BaseModel):
+    pass
+
+
+@router.post("/{name}/scenes/{scene_id}/history/{history_id}/select")
+async def select_history_image(name: str, scene_id: str, history_id: str):
+    """Сделать запись активной: восстанавливает prompt и local_values."""
+    name = unquote(name)
+
+    entry = history.get_one(name, scene_id, history_id)
+    if entry is None:
+        raise HTTPException(404, "history entry not found")
+
+    pjson = _project_dir(name) / "project.json"
+    if not pjson.exists():
+        raise HTTPException(404, "project not found")
+
+    project = json.loads(pjson.read_text(encoding="utf-8"))
+    found = False
+
+    for scene in project.get("scenes", []):
+        if scene.get("id") != scene_id:
+            continue
+
+        # Восстанавливаем prompt и local_values из записи
+        values = entry.get("values") or {}
+        if "prompt" in values:
+            scene["prompt"] = values["prompt"]
+
+        # local_values — все поля кроме prompt
+        lv = dict(values)
+        lv.pop("prompt", None)
+        lv.pop("filename_prefix", None)
+        scene["local_values"] = lv
+
+        # Активная картинка
+        # Активная картинка — с пропорциями из записи
+        entry_image = entry.get("image") or {}
+        scene["last_image"] = {
+            "history_id": history_id,
+            "width": entry_image.get("width", values.get("width", 1152)),
+            "height": entry_image.get("height", values.get("height", 896)),
+        }
+        found = True
+        break
+
+    if not found:
+        raise HTTPException(404, "scene not found")
+
+    project["modified"] = datetime.utcnow().isoformat() + "Z"
+    pjson.write_text(
+        json.dumps(project, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return {"ok": True}
 
 @router.delete("/{name}")
 async def delete_project(name: str):
