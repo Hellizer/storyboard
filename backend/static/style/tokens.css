@@ -1,0 +1,68 @@
+:root {
+  /* Фоны */
+  --bg-0: #1a1a1a;
+  --bg-1: #252530;
+  --bg-2: #2a2a2a;
+  --bg-3: #2a2a38;
+  --bg-4: #1e1e2a;
+  --bg-hi: #22222c;
+  --bg-lo: #252525;
+
+  /* Текст */
+  --fg-0: #fff;
+  --fg-1: #ddd;
+  --fg-2: #ccc;
+  --fg-3: #aaa;
+  --fg-4: #888;
+  --fg-5: #666;
+  --fg-6: #555;
+
+  /* Акценты */
+  --accent: #4a8aca;
+  --accent-hover: #5a9ada;
+  --accent-bg: #2d4a6a;
+  --accent-bg-soft: #2a3a4a;
+  --danger: #ff8888;
+  --danger-hover: #ffbbbb;
+  --danger-bg: #4a2a2a;
+  --danger-bg-hover: #5a3a3a;
+  --success: #5a5;
+  --warning: #a55;
+
+  /* Границы */
+  --border: #333;
+  --border-hi: #444;
+  --border-lo: #2a2a3a;
+  --border-hi-hover: #5a5a7a;
+
+  /* Отступы */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+
+  /* Радиусы */
+  --r-sm: 4px;
+  --r: 6px;
+  --r-lg: 8px;
+  --r-xl: 10px;
+
+  /* Типографика */
+  --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-mono: monospace;
+  --fz-xs: 10px;
+  --fz-sm: 11px;
+  --fz-md: 12px;
+  --fz: 13px;
+  --fz-lg: 15px;
+  --fz-xl: 16px;
+
+  /* Тени */
+  --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.6);
+  --shadow-panel: -8px 0 24px rgba(0, 0, 0, 0.4);
+
+  /* Хедер */
+  --header-h: 48px;
+  --body-padding-top: 60px;
+}

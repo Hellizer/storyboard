@@ -2,8 +2,8 @@
  * Модалка управления пресетами. Полный CRUD.
  * Используется из настроек проекта и (потом) из рабочего экрана.
  */
-import { api } from './api.js';
-import { $ } from './ui.js';
+import { api } from '../core/api.js';
+import { $ } from '../infra/dom.js';
 
 let currentPresetName = null;  // какой пресет сейчас открыт в форме
 let allPresets = [];

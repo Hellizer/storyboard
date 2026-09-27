@@ -1,0 +1,87 @@
+#view-scene-gen.view.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--body-padding-top) - 20px);
+  overflow: hidden;
+}
+
+.scene-description-bar {
+  background: var(--bg-1);
+  border-left: 3px solid var(--accent);
+  padding: 10px var(--sp-4);
+  border-radius: var(--r-sm);
+  max-height: 120px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.scene-description-bar.hidden { display: none; }
+.scene-description-label {
+  font-size: var(--fz-xs);
+  color: var(--fg-4);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: var(--sp-1);
+}
+.scene-description-text {
+  font-size: var(--fz);
+  color: var(--fg-2);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.scene-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--sp-3);
+  overflow: hidden;
+  position: relative;
+}
+
+.scene-layout .main-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scene-layout .row {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.scene-layout .col-left,
+.scene-layout .col-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.scene-layout .col-left { overflow-y: auto; }
+.scene-layout .col-right { margin-left: var(--sp-3); }
+
+.scene-preview-big {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-2);
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-6);
+  font-size: var(--fz);
+  overflow: hidden;
+  cursor: zoom-in;
+  position: relative;
+}
+.scene-preview-big img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}

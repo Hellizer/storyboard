@@ -1,0 +1,70 @@
+.empty-state {
+  text-align: center;
+  padding: 80px var(--sp-5);
+  color: var(--fg-5);
+}
+.empty-state p { margin: var(--sp-2) 0; }
+.empty-state .hint { font-size: var(--fz-md); color: var(--border-hi); }
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+
+.project-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+.project-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-3);
+}
+
+.project-card-title {
+  font-size: 14px;
+  color: var(--fg-0);
+  margin-bottom: var(--sp-2);
+  padding-right: 24px;
+  word-break: break-word;
+}
+.project-card-meta {
+  font-size: var(--fz-md);
+  color: var(--fg-4);
+  margin-bottom: var(--sp-1);
+}
+.project-card-date {
+  font-size: var(--fz-sm);
+  color: var(--fg-6);
+  font-family: var(--font-mono);
+}
+.project-card-delete {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  background: transparent;
+  border: none;
+  color: var(--fg-5);
+  cursor: pointer;
+  font-size: 14px;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+}
+.project-card-delete:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.project-placeholder {
+  text-align: center;
+  padding: 120px var(--sp-5);
+  color: var(--fg-5);
+}
+.project-placeholder p { margin: var(--sp-2) 0; }
+.project-placeholder .hint { font-size: var(--fz-md); color: var(--border-hi); }

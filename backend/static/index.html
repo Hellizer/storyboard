@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>HR-MoA</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style/main.css">
 </head>
 <body>
     <!-- ==================== ГЛОБАЛЬНЫЙ ХЕДЕР ==================== -->
@@ -103,11 +103,40 @@
         </div>
 
         <div class="col-right">
-          <div class="scene-preview-big" id="genScenePreview" title="Клик — открыть в полном размере">
-            здесь появится картинка
+          <!-- Табы -->
+          <div class="scene-tabs">
+            <button class="scene-tab active" data-tab="preview">Превью</button>
+            <button class="scene-tab" data-tab="chat">Чат</button>
+            <button class="scene-tab" data-tab="cubes">Кубики</button>
           </div>
-          <div class="applied" id="genSceneApplied"></div>
 
+          <!-- Контент таба -->
+          <div class="scene-tab-content">
+            <div class="scene-tab-pane active" data-tab="preview">
+              <div class="scene-preview-big" id="genScenePreview" title="Клик — открыть в полном размере">
+                здесь появится картинка
+              </div>
+              <div class="applied" id="genSceneApplied"></div>
+            </div>
+
+            <div class="scene-tab-pane" data-tab="chat">
+              <div class="tab-placeholder">
+                <div class="tab-placeholder-icon">💬</div>
+                <div class="tab-placeholder-title">Чат с LLM</div>
+                <div class="tab-placeholder-hint">в разработке</div>
+              </div>
+            </div>
+
+            <div class="scene-tab-pane" data-tab="cubes">
+              <div class="tab-placeholder">
+                <div class="tab-placeholder-icon">🧩</div>
+                <div class="tab-placeholder-title">Библиотека кубиков</div>
+                <div class="tab-placeholder-hint">в разработке</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- История — всегда внизу, вне табов -->
           <div class="scene-history" id="sceneHistory">
             <div class="scene-history-empty">нет сгенерированных вариантов</div>
           </div>

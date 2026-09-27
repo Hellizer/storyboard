@@ -1,0 +1,54 @@
+/* Глобальный хедер */
+.global-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  background: var(--bg-hi);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-5);
+  z-index: 500;
+}
+
+.gh-left { flex: 0 0 auto; }
+.gh-center { flex: 1; display: flex; justify-content: center; }
+.gh-right { flex: 0 0 auto; }
+
+.gh-logo {
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Views */
+.view { display: none; }
+.view.active { display: block; }
+
+/* Topbar внутри view */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-5);
+}
+
+/* Колонки */
+.row {
+  display: flex;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+.col-left { flex: 1; min-width: 400px; }
+.col-right { flex: 1; min-width: 400px; }
+
+/* Метки */
+label {
+  display: block;
+  font-size: var(--fz-md);
+  color: var(--fg-4);
+  margin: var(--sp-3) 0 var(--sp-1);
+}

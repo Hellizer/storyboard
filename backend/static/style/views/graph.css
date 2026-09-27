@@ -1,0 +1,33 @@
+#view-project.view.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--body-padding-top) - 20px);
+}
+
+.graph-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--body-padding-top) - 120px);
+  background: var(--bg-0);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-top: var(--sp-1);
+}
+.graph-wrapper canvas {
+  display: block;
+  cursor: grab;
+}
+.graph-wrapper canvas:active { cursor: grabbing; }
+
+.graph-hint {
+  position: absolute;
+  bottom: var(--sp-3);
+  left: var(--sp-3);
+  font-size: var(--fz-sm);
+  color: var(--fg-5);
+  background: rgba(0, 0, 0, 0.6);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}

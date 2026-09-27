@@ -1,0 +1,85 @@
+.scene-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  margin-bottom: var(--sp-2);
+}
+
+.scene-tab {
+  padding: var(--sp-1) 14px;
+  background: transparent;
+  border: none;
+  color: var(--fg-4);
+  cursor: pointer;
+  font-size: var(--fz-md);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.scene-tab:hover { color: var(--fg-2); }
+.scene-tab.active {
+  color: var(--fg-0);
+  border-bottom-color: var(--accent);
+}
+
+.scene-tab-content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.scene-tab-pane {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.scene-tab-pane.active { display: flex; }
+
+/* Заглушки табов */
+.tab-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-6);
+  gap: var(--sp-2);
+}
+.tab-placeholder-icon {
+  font-size: 32px;
+  opacity: 0.5;
+}
+.tab-placeholder-title {
+  font-size: 14px;
+  color: var(--fg-4);
+}
+.tab-placeholder-hint {
+  font-size: var(--fz-sm);
+  color: var(--fg-6);
+}
+
+/* Общие табы внутри модалок (другие, не сценные) */
+.tabs {
+  display: flex;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  padding: var(--sp-2) var(--sp-4);
+  background: transparent;
+  border: none;
+  color: var(--fg-4);
+  cursor: pointer;
+  font-size: var(--fz);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tab.active {
+  color: var(--fg-0);
+  border-bottom-color: var(--accent);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }

@@ -15,7 +15,7 @@
  * Удалены (не используются):
  *   comfy.js, state.js, presets.js, settings.js
  */
-import { addRoute, setNotFound, initRouter, navigate } from './router.js';
+import { addRoute, setNotFound, initRouter, navigate } from './core/router.js';
 import { showProjectsList, initProjectsView } from './views/projects.js';
 import {
   showProject, initProjectView,
@@ -25,11 +25,11 @@ import {
 } from './views/project.js';
 import {
   showSceneGeneration, closeSceneGeneration, initSceneGenerationView,
-} from './views/scene.js';
-import { initPresetsManager } from './presets_manager.js';
-import { initScenePanel } from './panel.js';
-import { generation } from './generation.js';
-import { initQueueUI } from './queue_ui.js';
+} from './views/scene/index.js';
+import { initPresetsManager } from './components/presets_manager.js';
+import { initScenePanel } from './components/panel.js';
+import { generation } from './core/generation.js';
+import { initQueueUI } from './core/queue_ui.js';
 
 
 function init() {

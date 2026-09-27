@@ -1,10 +1,10 @@
 /**
  * Экран со списком проектов.
  */
-import { api } from '../api.js';
-import { navigate } from '../router.js';
-import { validateProjectName, checkProjectNameAvailable } from '../validate.js';
-import { $ } from '../ui.js';
+import { api } from '../core/api.js';
+import { navigate } from '../core/router.js';
+import { validateProjectName, checkProjectNameAvailable } from '../core/validate.js';
+import { $ } from '../infra/dom.js';
 
 let cachedProjects = [];
 

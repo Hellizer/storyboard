@@ -3,8 +3,8 @@
  * Локальные значения хранятся в scene.local_values.
  * Кнопка «Обновить пресет» переносит их в выбранный пресет.
  */
-import { api } from './api.js';
-import { $ } from './ui.js';
+import { api } from '../core/api.js';
+import { $ } from '../infra/dom.js';
 
 let currentSceneId = null;
 let deps = null;

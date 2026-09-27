@@ -1,0 +1,91 @@
+.icon-btn {
+  background: var(--border-lo);
+  border: none;
+  color: var(--fg-2);
+  padding: var(--sp-2) 14px;
+  border-radius: var(--r);
+  cursor: pointer;
+  font-size: var(--fz);
+}
+.icon-btn:hover { background: #3a3a4a; }
+
+.icon-btn.primary,
+.topbar .primary {
+  background: var(--accent);
+  color: white;
+}
+.icon-btn.primary:hover,
+.topbar .primary:hover { background: var(--accent-hover); }
+
+.icon-btn.danger {
+  background: var(--danger-bg);
+  color: #ff9999;
+}
+.icon-btn.danger:hover {
+  background: var(--danger-bg-hover);
+  color: var(--danger-hover);
+}
+
+.icon-btn.small {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fz-md);
+}
+
+.generate-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--r);
+  font-size: var(--fz-lg);
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: var(--sp-3);
+}
+.generate-btn:hover { background: var(--accent-hover); }
+.generate-btn:disabled {
+  background: var(--fg-6);
+  cursor: not-allowed;
+}
+
+/* Progress */
+.progress-wrap {
+  margin-top: var(--sp-3);
+  background: var(--bg-2);
+  border-radius: var(--r-sm);
+  height: 22px;
+  overflow: hidden;
+  display: none;
+}
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.2s;
+  text-align: center;
+  line-height: 22px;
+  font-size: var(--fz-sm);
+  color: white;
+  font-weight: bold;
+}
+
+/* Индикаторы статуса */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg-5);
+}
+.status-dot.ok { background: var(--success); }
+.status-dot.bad { background: var(--warning); }
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fz-md);
+  padding: var(--sp-1) 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+}

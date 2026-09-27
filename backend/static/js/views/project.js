@@ -1,18 +1,17 @@
-import { api } from '../api.js';
-import { $ } from '../ui.js';
+import { api } from '../core/api.js';
+import { $ } from '../infra/dom.js';
 import {
   validateProjectName,
   checkProjectNameAvailable,
-} from '../validate.js';
-import { openPresetsManager } from '../presets_manager.js';
+} from '../core/validate.js';
+import { openPresetsManager } from '../components/presets_manager.js';
 import { SceneGraph } from '../graph.js';
-import { navigate } from '../router.js';
-import { generation } from '../generation.js';
+import { navigate } from '../core/router.js';
+import { generation } from '../core/generation.js';
 
 let currentProject = null;
 let graph = null;
 let saveTimer = null;
-let editingSceneId = null;
 
 // ============================================================
 // Показ проекта (граф)
@@ -39,16 +38,15 @@ export async function showProject(encodedName) {
   if (!graph) {
     const canvas = $('graphCanvas');
     graph = new SceneGraph(canvas, {
-          onOpenScene: openSceneEditor,
-          onChange: scheduleSave,
-          onCreateScene: (scene) => openSceneEditor(scene.id),
-          projectName: currentProject.name,
-        });
+      onOpenScene: openSceneEditor,
+      onChange: scheduleSave,
+      onCreateScene: (scene) => openSceneEditor(scene.id),
+      projectName: currentProject.name,
+    });
   }
 
   graph.setData(currentProject.scenes || [], currentProject.edges || []);
   graph.projectName = currentProject.name;
-
   graph.centerView();
 }
 
@@ -80,75 +78,6 @@ function openSceneEditor(sceneId) {
   const scene = graph.getScene(sceneId);
   if (!scene) return;
   navigate(`/project/${encodeURIComponent(currentProject.name)}/scene/${sceneId}`);
-}
-
-function openSceneSettingsModal(sceneId) {
-  const scene = graph?.getScene(sceneId);
-  if (!scene) return;
-
-  editingSceneId = sceneId;
-  $('sceneName').value = scene.title || 'Сцена';
-  $('sceneDescription').value = scene.description || '';
-  $('sceneError').textContent = '';
-
-  reloadScenePresetSelect(scene.preset);
-
-  $('sceneModal').classList.add('open');
-  $('sceneName').focus();
-}
-
-async function reloadScenePresetSelect(currentValue) {
-  const sel = $('scenePreset');
-  if (!sel) return;
-  sel.innerHTML = '';
-
-  const none = document.createElement('option');
-  none.value = '';
-  none.textContent = '(наследовать от проекта)';
-  sel.appendChild(none);
-
-  try {
-    const names = await api.presets.list();
-    for (const name of names) {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    }
-    sel.value = currentValue || '';
-  } catch (e) {
-    console.warn('[project] не удалось получить список пресетов:', e);
-  }
-}
-
-function saveSceneConfig() {
-  if (!editingSceneId) return;
-  const title = $('sceneName').value.trim() || 'Сцена';
-  const description = $('sceneDescription').value;
-  const preset = $('scenePreset').value || null;
-  const id = editingSceneId;
-
-  graph.updateScene(id, { title, description, preset, configured: true });
-  closeSceneConfig();
-
-  window.dispatchEvent(new CustomEvent('scene-updated', { detail: { sceneId: id } }));
-
-  const targetHash = `#/project/${encodeURIComponent(currentProject.name)}/scene/${id}`;
-  if (window.location.hash !== targetHash) {
-    navigate(`/project/${encodeURIComponent(currentProject.name)}/scene/${id}`);
-  }
-}
-
-function closeSceneConfig() {
-  $('sceneModal').classList.remove('open');
-  editingSceneId = null;
-}
-
-function deleteSceneFromConfig() {
-  if (!editingSceneId) return;
-  if (!confirm('Удалить эту сцену?')) return;
-  graph.removeScene(editingSceneId);
-  closeSceneConfig();
 }
 
 // ============================================================
@@ -188,33 +117,16 @@ export function initProjectView() {
       await reloadProjectPresetSelect();
     });
   });
+
   // Подписка на обновления сцен из очереди
-    window.addEventListener('scene-changed', (e) => {
-      if (!graph) return;
-      const { projectName, sceneId, last_image } = e.detail;
-      if (currentProject && projectName !== currentProject.name) return;
-      if (!graph.getScene(sceneId)) return;
-
-      graph.updateScene(sceneId, { last_image });
-    });
-    generation.on('scene-changed', (e) => {
-      if (!graph) return;
-      const { projectName, sceneId, last_image } = e;
-      if (currentProject && projectName !== currentProject.name) return;
-      const scene = graph.getScene(sceneId);
-      if (!scene) return;
-      graph.updateScene(sceneId, { last_image });
-    });
-  // Escape закрывает модалку сцены
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if ($('sceneModal').classList.contains('open')) {
-        closeSceneConfig();
-      }
-    }
+  generation.on('scene-changed', (e) => {
+    if (!graph) return;
+    const { projectName, sceneId, last_image } = e;
+    if (currentProject && projectName !== currentProject.name) return;
+    const scene = graph.getScene(sceneId);
+    if (!scene) return;
+    graph.updateScene(sceneId, { last_image });
   });
-
-
 }
 
 // ============================================================

@@ -5,7 +5,7 @@
  * которое приходит из generation.js (WS /ws/app).
  */
 import { generation } from './generation.js';
-import { $ } from './ui.js';
+import { $ } from '../infra/dom.js';
 
 let queueOpen = false;
 

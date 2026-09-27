@@ -1,0 +1,27 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px;
+  padding-top: var(--body-padding-top);
+  font-family: var(--font);
+  background: var(--bg-0);
+  color: var(--fg-1);
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: var(--fz-xl);
+  margin: 0;
+  color: var(--fg-0);
+  font-weight: normal;
+}
+
+/* Скроллбары */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-0); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-hi-hover); }
