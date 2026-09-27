@@ -1,0 +1,22 @@
+# Пользовательские проекты
+projects/
+
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

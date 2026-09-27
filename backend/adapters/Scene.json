@@ -1,0 +1,54 @@
+{
+  "name": "Scene",
+  "description": "Автоматически сгенерирован из Scene.json",
+  "mapping": {
+    "unet_name": {
+      "node_id": "80:146",
+      "class_type": "UNETLoader",
+      "field": "unet_name"
+    },
+    "width": {
+      "node_id": "138",
+      "class_type": "EmptyLatentImage",
+      "field": "width"
+    },
+    "height": {
+      "node_id": "138",
+      "class_type": "EmptyLatentImage",
+      "field": "height"
+    },
+    "lora_name": {
+      "node_id": "197",
+      "class_type": "LoraLoaderModelOnly",
+      "field": "lora_name"
+    },
+    "lora_strength": {
+      "node_id": "197",
+      "class_type": "LoraLoaderModelOnly",
+      "field": "strength_model"
+    },
+    "shift": {
+      "node_id": "195",
+      "class_type": "ModelSamplingAuraFlow",
+      "field": "shift"
+    },
+    "filename_prefix": {
+      "node_id": "132",
+      "class_type": "SaveImage",
+      "field": "filename_prefix"
+    }
+  },
+  "import_info": {
+    "found": [
+      "model: UNETLoader #80:146",
+      "latent: EmptyLatentImage #138",
+      "LoRA: LoraLoaderModelOnly #197",
+      "shift: ModelSamplingAuraFlow #195",
+      "save: SaveImage #132"
+    ],
+    "missing": [
+      "sampler (KSampler / KSamplerAdvanced)"
+    ],
+    "notes": []
+  }
+}

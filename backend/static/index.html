@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>HR-MoA</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- ==================== ГЛОБАЛЬНЫЙ ХЕДЕР ==================== -->
+    <header id="globalHeader" class="global-header">
+      <div class="gh-left">
+        <span class="gh-logo">HR-MoA</span>
+      </div>
+
+      <div class="gh-center">
+        <button class="gh-queue-btn" id="btnGlobalQueue" title="Очередь задач">
+          <span class="gh-queue-icon">⚙</span>
+          <span id="ghQueueBadge" class="gh-queue-badge hidden">0</span>
+          <span id="ghQueueStatus" class="gh-queue-status">очередь пуста</span>
+        </button>
+      </div>
+
+      <div class="gh-right"></div>
+    </header>
+
+    <!-- ==================== ПАНЕЛЬ ОЧЕРЕДИ (выпадающая) ==================== -->
+    <div id="queuePanel" class="queue-panel hidden">
+        <div class="queue-header">
+          <h3>Очередь задач</h3>
+          <button class="icon-btn small" id="btnQueueClose">✕</button>
+        </div>
+      <div class="queue-body" id="queueBody">
+        <div class="queue-empty">Очередь пуста</div>
+      </div>
+    </div>
+
+<!-- ==================== ЭКРАН: СПИСОК ПРОЕКТОВ ==================== -->
+<div id="view-projects" class="view">
+  <div class="topbar">
+    <h1>HR-MoA — проекты</h1>
+    <button class="icon-btn primary" id="btnNewProject">+ Новый проект</button>
+  </div>
+
+  <div id="projectsEmpty" class="empty-state" style="display:none;">
+    <p>Проектов пока нет.</p>
+    <p class="hint">Нажмите «+ Новый проект», чтобы начать.</p>
+  </div>
+
+  <div id="projectsGrid" class="projects-grid"></div>
+</div>
+
+<!-- ==================== ЭКРАН: ПРОЕКТ ==================== -->
+<div id="view-project" class="view">
+  <div class="topbar">
+    <button class="icon-btn" id="btnBackToProjects">← Все проекты</button>
+    <h1 id="projectTitle">...</h1>
+    <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="btnAddScene">+ Сцена</button>
+      <button class="icon-btn" id="btnProjectSettings">⚙ Настройки проекта</button>
+    </div>
+  </div>
+
+  <div class="graph-wrapper">
+    <canvas id="graphCanvas"></canvas>
+    <div class="graph-hint">
+      Двойной клик — создать сцену · Shift+drag — связать · Delete — удалить · Колесо — zoom
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ЭКРАН: ГЕНЕРАЦИЯ СЦЕНЫ ==================== -->
+<div id="view-scene-gen" class="view">
+
+  <div class="topbar">
+    <button class="icon-btn" id="btnGenBackToGraph">← К графу</button>
+    <h1 id="genSceneTitle">...</h1>
+    <button class="icon-btn" id="btnTogglePanel" title="Панель настроек (Ctrl+P)">☰</button>
+  </div>
+
+  <div class="scene-description-bar" id="genSceneDescriptionBar">
+    <div class="scene-description-label">Описание сцены</div>
+    <div class="scene-description-text" id="genSceneDescription"></div>
+  </div>
+
+  <div class="scene-layout">
+
+    <!-- Основная колонка -->
+    <div class="main-col">
+      <div class="row">
+        <div class="col-left">
+          <label>Промпт</label>
+          <textarea id="genScenePrompt" placeholder="что рисуем..."></textarea>
+
+          <label>Seed</label>
+          <div class="seed-row">
+            <input id="genSceneSeed" type="number" placeholder="оставь пустым — случайный">
+            <button class="icon-btn" id="btnGenSceneRandomSeed" title="Случайный seed">🎲</button>
+          </div>
+
+          <button class="generate-btn" id="btnGenSceneGenerate">🎨 Сгенерировать</button>
+
+          <div class="status" id="genSceneStatus"></div>
+        </div>
+
+        <div class="col-right">
+          <label>Результат</label>
+          <div class="preview" id="genScenePreview">здесь появится картинка</div>
+          <div class="applied" id="genSceneApplied"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Панель настроек сцены -->
+    <aside id="scenePanel" class="scene-panel hidden">
+      <div class="panel-header">
+        <h3>Настройки сцены</h3>
+        <button class="icon-btn" id="btnPanelClose">✕</button>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- Пресет -->
+        <div class="panel-section">
+          <label>Пресет</label>
+          <div class="panel-row">
+            <select id="panelPresetSelect"></select>
+            <button class="icon-btn small" id="btnPanelSaveAsPreset" title="Сохранить как новый">💾</button>
+          </div>
+          <div class="panel-hint" id="panelPresetHint"></div>
+        </div>
+
+        <!-- Сцена -->
+        <div class="panel-section">
+          <label>Название сцены</label>
+          <input id="panelSceneTitle" type="text" autocomplete="off">
+        </div>
+
+        <div class="panel-section">
+          <label>Описание сцены</label>
+          <textarea id="panelSceneDescription" style="min-height:80px; font-family:inherit;"></textarea>
+        </div>
+
+        <hr style="border:none; border-top:1px solid #333; margin:12px 0;">
+
+        <!-- Модель -->
+        <div class="panel-section">
+          <label>Модель</label>
+          <select id="panelModel"></select>
+        </div>
+
+        <!-- LoRA -->
+        <div class="panel-grid-2">
+          <div>
+            <label>LoRA</label>
+            <select id="panelLora"></select>
+          </div>
+          <div>
+            <label>Strength</label>
+            <input id="panelLoraStrength" type="number" step="0.05" value="0.8">
+          </div>
+        </div>
+
+        <!-- Размеры -->
+        <div class="panel-grid-swap">
+          <div>
+            <label>Width</label>
+            <input id="panelWidth" type="number" value="1152">
+          </div>
+          <button class="icon-btn swap-btn" id="btnSwapWH" title="Поменять местами">⟷</button>
+          <div>
+            <label>Height</label>
+            <input id="panelHeight" type="number" value="896">
+          </div>
+        </div>
+
+        <!-- Параметры -->
+        <div class="panel-grid-4">
+          <div>
+            <label>Steps</label>
+            <input id="panelSteps" type="number" value="20">
+          </div>
+          <div>
+            <label>CFG</label>
+            <input id="panelCfg" type="number" step="0.1" value="8">
+          </div>
+          <div>
+            <label>Shift</label>
+            <input id="panelShift" type="number" step="0.01" value="2.5">
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Sampler / Scheduler -->
+        <div class="panel-grid-2">
+          <div>
+            <label>Sampler</label>
+            <select id="panelSampler"></select>
+          </div>
+          <div>
+            <label>Scheduler</label>
+            <select id="panelScheduler"></select>
+          </div>
+        </div>
+
+        <!-- Негатив — растянутое поле внизу -->
+        <div class="panel-section panel-negative">
+          <label>Негатив</label>
+          <textarea id="panelNegative" placeholder="negative prompt..."></textarea>
+        </div>
+
+      </div>
+
+      <div class="panel-footer">
+        <button class="icon-btn primary" id="btnPanelUpdatePreset">
+          💾 Обновить пресет
+        </button>
+        <button class="icon-btn danger" id="btnPanelDeleteScene">
+          🗑 Удалить сцену
+        </button>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ==================== МОДАЛКА: СОЗДАНИЕ ПРОЕКТА ==================== -->
+<div class="modal-backdrop" id="newProjectModal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <h2>Новый проект</h2>
+      <button class="icon-btn" id="btnCancelNewProject">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Название</label>
+        <input id="newProjectName" type="text" placeholder="Заброшенный вокзал" autofocus>
+        <div class="error-msg" id="newProjectError"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="icon-btn" id="btnCancelNewProject2">Отмена</button>
+      <button class="icon-btn primary" id="btnCreateProject">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== МОДАЛКА: НАСТРОЙКИ ПРОЕКТА ==================== -->
+<div class="modal-backdrop" id="projectSettingsModal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <h2>Настройки проекта</h2>
+      <button class="icon-btn" id="btnCancelProjectSettings">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Название</label>
+        <input id="projectSettingsName" type="text">
+        <div class="error-msg" id="projectSettingsError"></div>
+        <div class="hint">Переименование также переименует папку проекта.</div>
+      </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="projectSettingsDescription" class="small"
+                  placeholder="необязательно"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Пресет по умолчанию</label>
+        <div style="display:flex; gap:8px;">
+          <select id="projectSettingsPreset" style="flex:1;">
+            <option value="">(не выбран)</option>
+          </select>
+          <button class="icon-btn" id="btnOpenPresetsManager" title="Управление пресетами">⚙</button>
+        </div>
+        <div class="hint">Наследуется всеми сценами проекта.</div>
+      </div>
+      <hr style="border:none; border-top:1px solid #333; margin:16px 0;">
+      <button class="icon-btn danger" id="btnDeleteProjectFromSettings">
+        🗑 Удалить проект
+      </button>
+      <div class="hint">Все сцены и изображения будут удалены безвозвратно.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="icon-btn" id="btnCancelProjectSettings2">Отмена</button>
+      <button class="icon-btn primary" id="btnSaveProjectSettings">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== МОДАЛКА: УПРАВЛЕНИЕ ПРЕСЕТАМИ ==================== -->
+<div class="modal-backdrop" id="presetsManagerModal">
+  <div class="modal" style="width:820px; max-width:95%;">
+    <div class="modal-header">
+      <h2>Управление пресетами</h2>
+      <button class="icon-btn" id="btnPresetsClose">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div class="presets-manager-layout">
+
+        <div class="presets-list-col">
+          <div class="presets-list-header">
+            <button class="icon-btn primary" id="btnPresetsCreate" style="width:100%;">+ Новый пресет</button>
+          </div>
+          <div class="presets-list" id="presetsList"></div>
+        </div>
+
+        <div class="presets-form-col">
+          <div id="presetFormEmpty" class="presets-form-empty">
+            <p>Выберите пресет слева<br>или создайте новый.</p>
+          </div>
+
+          <div id="presetForm" style="display:none;">
+            <div class="form-group">
+              <label>Имя пресета</label>
+              <input id="pmName" type="text">
+              <div class="error-msg" id="pmError"></div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Шаблон</label>
+                <select id="pmTemplate"></select>
+              </div>
+              <div class="form-group">
+                <label>Адаптер</label>
+                <select id="pmAdapter"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <button class="icon-btn" id="btnPresetsImport" style="width:100%;">
+                ⚙ Импортировать workflow (сгенерировать адаптер)
+              </button>
+              <div class="hint">Читает templates/&lt;выбранный&gt;.json и создаёт adapters/&lt;то же имя&gt;.json</div>
+            </div>
+
+            <div class="form-group">
+              <label>Модель (UNETLoader)</label>
+              <select id="pmModel"></select>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label>LoRA</label>
+                <select id="pmLoraName"></select>
+              </div>
+              <div class="form-group">
+                <label>LoRA strength</label>
+                <input id="pmLoraStrength" type="number" step="0.05" value="0.8">
+              </div>
+            </div>
+
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label>Steps</label>
+                <input id="pmSteps" type="number" value="20">
+              </div>
+              <div class="form-group">
+                <label>CFG</label>
+                <input id="pmCfg" type="number" step="0.1" value="8">
+              </div>
+              <div class="form-group">
+                <label>Sampler</label>
+                <select id="pmSamplerName"></select>
+              </div>
+              <div class="form-group">
+                <label>Scheduler</label>
+                <select id="pmScheduler"></select>
+              </div>
+            </div>
+
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label>Shift</label>
+                <input id="pmShift" type="number" step="0.01" value="2.5">
+              </div>
+              <div class="form-group">
+                <label>Width</label>
+                <input id="pmWidth" type="number" value="1152">
+              </div>
+              <div class="form-group">
+                <label>Height</label>
+                <input id="pmHeight" type="number" value="896">
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="icon-btn" id="btnRefreshComfyLists" style="width:100%;">🔄 Обновить</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Негатив</label>
+              <textarea id="pmNegative" class="small"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button class="icon-btn primary" id="btnPresetsSave">💾 Сохранить</button>
+              <button class="icon-btn danger" id="btnPresetsDelete">🗑 Удалить</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/static/js/main.js?v=5"></script>
+</body>
+</html>

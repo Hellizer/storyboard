@@ -1,0 +1,90 @@
+{
+  "name": "simple_anima",
+  "description": "Автоматически сгенерирован из simple_anima.json",
+  "mapping": {
+    "steps": {
+      "node_id": "9",
+      "class_type": "KSampler",
+      "field": "steps"
+    },
+    "cfg": {
+      "node_id": "9",
+      "class_type": "KSampler",
+      "field": "cfg"
+    },
+    "sampler_name": {
+      "node_id": "9",
+      "class_type": "KSampler",
+      "field": "sampler_name"
+    },
+    "scheduler": {
+      "node_id": "9",
+      "class_type": "KSampler",
+      "field": "scheduler"
+    },
+    "seed": {
+      "node_id": "9",
+      "class_type": "KSampler",
+      "field": "seed"
+    },
+    "prompt": {
+      "node_id": "7",
+      "class_type": "CLIPTextEncode",
+      "field": "text"
+    },
+    "negative": {
+      "node_id": "8",
+      "class_type": "CLIPTextEncode",
+      "field": "text"
+    },
+    "unet_name": {
+      "node_id": "1",
+      "class_type": "UNETLoader",
+      "field": "unet_name"
+    },
+    "width": {
+      "node_id": "10",
+      "class_type": "EmptyLatentImage",
+      "field": "width"
+    },
+    "height": {
+      "node_id": "10",
+      "class_type": "EmptyLatentImage",
+      "field": "height"
+    },
+    "lora_name": {
+      "node_id": "5",
+      "class_type": "LoraLoaderModelOnly",
+      "field": "lora_name"
+    },
+    "lora_strength": {
+      "node_id": "5",
+      "class_type": "LoraLoaderModelOnly",
+      "field": "strength_model"
+    },
+    "shift": {
+      "node_id": "6",
+      "class_type": "ModelSamplingAuraFlow",
+      "field": "shift"
+    },
+    "filename_prefix": {
+      "node_id": "12",
+      "class_type": "SaveImage",
+      "field": "filename_prefix"
+    }
+  },
+  "import_info": {
+    "found": [
+      "sampler: KSampler #9",
+      "prompt: CLIPTextEncode #7",
+      "negative: CLIPTextEncode #8",
+      "model: UNETLoader #1",
+      "latent: EmptyLatentImage #10",
+      "LoRA: LoraLoaderModelOnly #5",
+      "shift: ModelSamplingAuraFlow #6",
+      "save: SaveImage #12"
+    ],
+    "missing": [],
+    "notes": []
+  }
+}

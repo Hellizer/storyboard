@@ -1,0 +1,216 @@
+{
+  "86": {
+    "inputs": {
+      "model": [
+        "195",
+        0
+      ],
+      "clip": [
+        "80:72",
+        0
+      ],
+      "vae": [
+        "80:73",
+        0
+      ],
+      "positive": [
+        "168",
+        0
+      ],
+      "negative": [
+        "87",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "87": {
+    "inputs": {
+      "text": "{{NEGATIVE}}",
+      "clip": [
+        "80:72",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "132": {
+    "inputs": {
+      "filename_prefix": "anima\\base_",
+      "images": [
+        "202",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "138": {
+    "inputs": {
+      "width": 1152,
+      "height": 896,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Hor_2"
+    }
+  },
+  "154": {
+    "inputs": {
+      "seed": "{{SEED}}"
+    },
+    "class_type": "SeedGeneratorMira",
+    "_meta": {
+      "title": "Random Seed Generator"
+    }
+  },
+  "168": {
+    "inputs": {
+      "text": [
+        "221",
+        0
+      ],
+      "clip": [
+        "80:72",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "promt"
+    }
+  },
+  "180": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": [
+        "154",
+        0
+      ],
+      "steps": 14,
+      "cfg": 1.5,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "start_at_step": 0,
+      "end_at_step": 1000,
+      "return_with_leftover_noise": true,
+      "basic_pipe": [
+        "86",
+        0
+      ],
+      "latent_image": [
+        "206",
+        0
+      ]
+    },
+    "class_type": "ImpactKSamplerAdvancedBasicPipe",
+    "_meta": {
+      "title": "alone"
+    }
+  },
+  "195": {
+    "inputs": {
+      "shift": 2.49,
+      "sampling": "flow",
+      "model": [
+        "197",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "197": {
+    "inputs": {
+      "lora_name": "anima-turbo-lora-v0.2.safetensors",
+      "strength_model": 0.8,
+      "model": [
+        "80:146",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "202": {
+    "inputs": {
+      "samples": [
+        "180",
+        1
+      ],
+      "vae": [
+        "180",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "206": {
+    "inputs": {
+      "rotation": "none",
+      "samples": [
+        "138",
+        0
+      ]
+    },
+    "class_type": "LatentRotate",
+    "_meta": {
+      "title": "Rotate Latent"
+    }
+  },
+  "221": {
+    "inputs": {
+      "value": "{{PROMPT}}"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "promt"
+    }
+  },
+  "80:72": {
+    "inputs": {
+      "clip_name": "qwen_3_06b_base.safetensors",
+      "type": "stable_diffusion",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "80:73": {
+    "inputs": {
+      "vae_name": "krea2RealVae_v10.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "80:146": {
+    "inputs": {
+      "unet_name": "dvine_v157_int8_rowwise.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  }
+}

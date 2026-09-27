@@ -1,0 +1,608 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif;
+  background: #1a1a1a; color: #ddd; min-height: 100vh;
+}
+
+/* ==================== Общие ==================== */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+h1 { font-size: 16px; margin: 0; color: #fff; font-weight: normal; }
+.icon-btn {
+  background: #2a2a3a; border: none; color: #ccc; padding: 8px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.icon-btn:hover { background: #3a3a4a; }
+.icon-btn.primary,
+.topbar .primary { background: #4a8aca; color: white; }
+.icon-btn.primary:hover,
+.topbar .primary:hover { background: #5a9ada; }
+.icon-btn.danger { background: #4a2a2a; color: #ff9999; }
+.icon-btn.danger:hover { background: #5a3a3a; color: #ffbbbb; }
+
+label { display: block; font-size: 12px; color: #888; margin: 12px 0 4px; }
+textarea, input, select {
+  width: 100%; padding: 8px; background: #2a2a2a; color: #eee;
+  border: 1px solid #444; border-radius: 4px; font-family: inherit; font-size: 13px;
+}
+textarea { min-height: 240px; resize: vertical; font-family: monospace; }
+textarea.small { min-height: 80px; }
+
+.row { display: flex; gap: 20px; flex-wrap: wrap; }
+.col-left { flex: 1; min-width: 400px; }
+.col-right { flex: 1; min-width: 400px; }
+
+.seed-row { display: flex; gap: 8px; align-items: stretch; }
+.seed-row input { flex: 1; }
+.seed-row .icon-btn { padding: 8px 12px; }
+
+.generate-btn {
+  width: 100%; padding: 14px; background: #4a8aca; color: white;
+  border: none; border-radius: 6px; font-size: 15px; font-weight: bold;
+  cursor: pointer; margin-top: 12px;
+}
+.generate-btn:hover { background: #5a9ada; }
+.generate-btn:disabled { background: #555; cursor: not-allowed; }
+
+.progress-wrap {
+  margin-top: 12px; background: #2a2a2a; border-radius: 4px;
+  height: 22px; overflow: hidden; display: none;
+}
+.progress-bar {
+  height: 100%; background: #4a8aca; width: 0%;
+  transition: width 0.2s; text-align: center; line-height: 22px;
+  font-size: 11px; color: white; font-weight: bold;
+}
+.status {
+  margin-top: 8px; font-size: 12px; color: #888; font-family: monospace;
+  min-height: 16px;
+}
+.preview {
+  background: #2a2a2a; border-radius: 6px; min-height: 400px;
+  display: flex; align-items: center; justify-content: center;
+  color: #555; font-size: 13px; overflow: hidden;
+}
+.preview img { max-width: 100%; display: block; border-radius: 6px; }
+.applied {
+  font-size: 10px; color: #6a6; margin-top: 8px; font-family: monospace;
+  word-break: break-all;
+}
+.applied .skip { color: #a66; }
+
+.hint { font-size: 11px; color: #666; margin-top: 4px; }
+.error-msg { font-size: 12px; color: #ff8888; margin-top: 4px; min-height: 16px; }
+
+/* ==================== Виды ==================== */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ==================== Модалки ==================== */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: #252530; border-radius: 10px; width: 720px; max-width: 92%;
+  max-height: 88vh; display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid #333;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h2 { font-size: 15px; margin: 0; font-weight: normal; color: #fff; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  padding: 14px 20px; border-top: 1px solid #333;
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #333; }
+.tab {
+  padding: 8px 16px; background: transparent; border: none;
+  color: #888; cursor: pointer; font-size: 13px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab.active { color: #fff; border-bottom-color: #4a8aca; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.form-group { margin-bottom: 12px; }
+.form-group label { margin-top: 0; }
+
+.connection-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 10px; border-radius: 4px;
+  background: #2a2a2a;
+}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+.status-dot.ok { background: #5a5; }
+.status-dot.bad { background: #a55; }
+
+/* ==================== Проекты ==================== */
+.empty-state { text-align: center; padding: 80px 20px; color: #666; }
+.empty-state p { margin: 8px 0; }
+.empty-state .hint { font-size: 12px; color: #444; }
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px; margin-top: 20px;
+}
+.project-card {
+  background: #252530; border: 1px solid #333; border-radius: 8px;
+  padding: 16px; cursor: pointer; position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+.project-card:hover { border-color: #4a8aca; background: #2a2a38; }
+.project-card-title {
+  font-size: 14px; color: #fff; margin-bottom: 8px;
+  padding-right: 24px; word-break: break-word;
+}
+.project-card-meta { font-size: 12px; color: #888; margin-bottom: 4px; }
+.project-card-date { font-size: 11px; color: #555; font-family: monospace; }
+.project-card-delete {
+  position: absolute; top: 8px; right: 8px;
+  background: transparent; border: none; color: #666;
+  cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px;
+}
+.project-card-delete:hover { background: #4a3a3a; color: #ff8888; }
+
+.project-placeholder { text-align: center; padding: 120px 20px; color: #666; }
+.project-placeholder p { margin: 8px 0; }
+.project-placeholder .hint { font-size: 12px; color: #444; }
+
+/* ==================== Менеджер пресетов ==================== */
+.presets-manager-layout { display: flex; min-height: 500px; }
+.presets-list-col {
+  width: 220px; border-right: 1px solid #333;
+  display: flex; flex-direction: column;
+}
+.presets-list-header { padding: 12px; border-bottom: 1px solid #333; }
+.presets-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+.preset-list-item {
+  padding: 8px 14px; cursor: pointer; font-size: 13px; color: #ccc;
+  border-left: 3px solid transparent;
+}
+.preset-list-item:hover { background: #2a2a38; }
+.preset-list-item.active {
+  background: #2a2a38; border-left-color: #4a8aca; color: #fff;
+}
+.preset-list-empty { padding: 20px; font-size: 12px; color: #666; text-align: center; }
+.presets-form-col { flex: 1; padding: 20px; overflow-y: auto; }
+.presets-form-empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: #666; font-size: 13px; text-align: center;
+}
+.form-actions {
+  display: flex; gap: 10px; margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid #333;
+}
+
+/* ==================== Граф сцен ==================== */
+.graph-wrapper {
+  position: relative; flex: 1;
+  min-height: calc(100vh - 120px);
+  background: #1a1a1a; border-radius: 8px;
+  overflow: hidden; margin-top: 4px;
+}
+.graph-wrapper canvas { display: block; cursor: grab; }
+.graph-wrapper canvas:active { cursor: grabbing; }
+.graph-hint {
+  position: absolute; bottom: 12px; left: 12px;
+  font-size: 11px; color: #666;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px; border-radius: 4px;
+  font-family: monospace; pointer-events: none;
+}
+
+#view-project.view.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 40px);
+}
+
+/* ==================== Экран генерации сцены ==================== */
+#view-scene-gen.view.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 40px);
+  overflow: hidden;
+}
+
+.scene-description-bar {
+  background: #252530;
+  border-left: 3px solid #4a8aca;
+  padding: 10px 16px;
+  border-radius: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.scene-description-bar.hidden { display: none; }
+.scene-description-label {
+  font-size: 10px; color: #888;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+.scene-description-text {
+  font-size: 13px; color: #ccc;
+  white-space: pre-wrap; line-height: 1.5;
+}
+
+.scene-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  gap: 12px;
+  overflow: hidden;
+}
+.scene-layout .main-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.scene-layout .row {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.scene-layout .col-left,
+.scene-layout .col-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.scene-layout .col-right .preview {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ==================== Панель настроек сцены ==================== */
+.scene-panel {
+  width: 22vw;
+  min-width: 340px;
+  max-width: 520px;
+  background: #252530;
+  border: 1px solid #333;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.scene-panel.hidden { display: none; }
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.panel-header h3 {
+  font-size: 13px; margin: 0;
+  font-weight: normal; color: #fff;
+}
+.panel-body {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+}
+.panel-section { margin-bottom: 12px; }
+.panel-section label {
+  display: block; font-size: 11px; color: #888; margin: 0 0 4px;
+}
+.panel-section input,
+.panel-section select,
+.panel-section textarea {
+  width: 100%; padding: 6px 8px;
+  background: #1e1e2a; color: #eee;
+  border: 1px solid #444; border-radius: 4px;
+  font-family: inherit; font-size: 12px;
+}
+.panel-grid-2 {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 12px;
+}
+.panel-grid-2 label {
+  display: block; font-size: 11px; color: #888; margin: 0 0 4px;
+}
+.panel-grid-2 input,
+.panel-grid-2 select {
+  width: 100%; padding: 6px 8px;
+  background: #1e1e2a; color: #eee;
+  border: 1px solid #444; border-radius: 4px; font-size: 12px;
+}
+.panel-grid-4 {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px; margin-bottom: 12px;
+}
+.panel-grid-4 label {
+  display: block; font-size: 11px; color: #888; margin: 0 0 4px;
+}
+.panel-grid-4 input {
+  width: 100%; padding: 6px 8px;
+  background: #1e1e2a; color: #eee;
+  border: 1px solid #444; border-radius: 4px; font-size: 12px;
+}
+.panel-row {
+  display: flex; gap: 6px; align-items: center;
+}
+.panel-row select { flex: 1; }
+.panel-row .icon-btn.small { padding: 6px 10px; font-size: 12px; }
+.panel-hint {
+  font-size: 10px; color: #666; margin-top: 4px; min-height: 12px;
+}
+.panel-hint.dirty { color: #4a8aca; }
+
+.panel-negative {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+}
+.panel-negative textarea {
+  flex: 1; min-height: 120px; resize: vertical;
+  font-family: monospace; font-size: 11px;
+}
+
+.panel-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #333;
+  display: flex; gap: 8px;
+  flex-shrink: 0;
+}
+.panel-footer .icon-btn {
+  flex: 1; font-size: 12px; padding: 8px;
+}
+
+.small-select {
+  width: 200px; padding: 4px 8px; font-size: 12px;
+  background: #2a2a2a; color: #eee;
+  border: 1px solid #444; border-radius: 4px;
+}
+
+/* ==================== Глобальный хедер ==================== */
+body { padding-top: 60px; }
+
+.global-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background: #22222c;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 500;
+}
+
+.gh-left { flex: 0 0 auto; }
+.gh-center { flex: 1; display: flex; justify-content: center; }
+.gh-right { flex: 0 0 auto; }
+
+.gh-logo {
+  font-size: 14px;
+  color: #4a8aca;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.gh-queue-btn {
+  background: #2a2a3a;
+  border: 1px solid #3a3a4a;
+  color: #ccc;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gh-queue-btn:hover { background: #3a3a4a; }
+.gh-queue-btn.running {
+  background: #2a3a4a;
+  border-color: #4a8aca;
+  color: #fff;
+}
+
+.gh-queue-icon {
+  font-size: 14px;
+}
+
+.gh-queue-badge {
+  background: #4a8aca;
+  color: white;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+}
+.gh-queue-badge.hidden { display: none; }
+
+.gh-queue-status {
+  font-size: 12px;
+  color: #888;
+}
+
+.gh-comfy-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #888;
+}
+.gh-comfy-status .status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #666;
+}
+.gh-comfy-status .status-dot.ok { background: #5a5; }
+.gh-comfy-status .status-dot.bad { background: #a55; }
+
+/* ==================== Панель очереди ==================== */
+.queue-panel {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  max-width: 95vw;
+  max-height: calc(100vh - 100px);
+  background: #252530;
+  border: 1px solid #333;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  z-index: 499;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.queue-panel.hidden { display: none; }
+
+.queue-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.queue-header h3 {
+  font-size: 13px;
+  margin: 0;
+  font-weight: normal;
+  color: #fff;
+}
+
+.queue-body {
+  overflow-y: auto;
+  padding: 8px;
+  min-height: 80px;
+}
+
+.queue-empty {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+.queue-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #2a2a38;
+  margin-bottom: 6px;
+  align-items: flex-start;
+}
+
+.queue-item-thumb {
+  width: 56px;
+  height: 56px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 20px;
+}
+.queue-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queue-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.queue-item-title {
+  font-size: 12px;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.queue-item-sub {
+  font-size: 11px;
+  color: #888;
+  font-family: monospace;
+}
+.queue-item-progress {
+  margin-top: 6px;
+  height: 4px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.queue-item-progress-bar {
+  height: 100%;
+  background: #4a8aca;
+  width: 0%;
+  transition: width 0.2s;
+}
+
+.queue-item.status-done .queue-item-sub { color: #5a5; }
+.queue-item.status-error .queue-item-sub { color: #c66; }
+.queue-item.status-running .queue-item-sub { color: #4a8aca; }
+.queue-item.status-cancelled .queue-item-sub { color: #888; }
+
+.queue-item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+.queue-item-actions .icon-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* ==================== Swap W/H в панели сцены ==================== */
+.panel-grid-swap {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: end;
+}
+.panel-grid-swap label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin: 0 0 4px;
+}
+.panel-grid-swap input {
+  width: 100%;
+  padding: 6px 8px;
+  background: #1e1e2a;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.panel-grid-swap .swap-btn {
+  padding: 6px 10px;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+/* icon-btn.small */
+.icon-btn.small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
