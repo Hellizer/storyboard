@@ -10,12 +10,16 @@ import { confirmDialog } from '../infra/dialogs.js';
 import { renderMarkdownLite } from '../infra/markdown.js';
 
 const THINKING_KEY = 'storyboard.chat.thinking';
+const FONT_KEY = 'storyboard.chatFontSize';
+const FONT_MIN = 10;
+const FONT_MAX = 22;
 
 let currentCtx = null;              // { scope, project, scene }
 let messages = [];                  // локальный кеш истории
 let pending = null;                 // { userMsg, assistantId, text, thinking, el }
 let enableThinking = false;
 let attachedImages = [];            // [{ kind, name }] или [{ kind:'chat_upload', data, name? }]
+let chatFontSize = null;
 let initialized = false;
 
 
@@ -134,6 +138,8 @@ export function initChatPanel() {
   on('done', onStreamDone);
   on('cancelled', onStreamCancelled);
   on('error', onStreamError);
+
+  initChatFontSize();
 }
 
 
@@ -203,6 +209,7 @@ function renderMessage(m) {
       const i = document.createElement('img');
       i.src = imageUrlFor(img);
       i.alt = img.name || '';
+      i.draggable = false;
       wrap.appendChild(i);
       imgs.appendChild(wrap);
     }
@@ -502,4 +509,93 @@ function readFileAsAttachment(file) {
     });
   };
   reader.readAsDataURL(file);
+}
+
+
+
+// ---------- размер шрифта сообщений чата ----------
+
+function readStoredFontSize() {
+  try {
+    const raw = localStorage.getItem(FONT_KEY);
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    if (Number.isFinite(n) && n >= FONT_MIN && n <= FONT_MAX) return n;
+  } catch {}
+  return null;
+}
+
+
+function getCurrentFontSizePx() {
+  const box = $('chatMessages');
+  if (!box) return 13;
+  const v = Math.round(parseFloat(getComputedStyle(box).fontSize));
+  return Number.isFinite(v) && v > 0 ? v : 13;
+}
+
+
+function applyChatFontSize(px) {
+  const box = $('chatMessages');
+  if (!box) return;
+
+  if (px == null) {
+    // Снять переопределение — вернуться к значениям из tokens.css.
+    box.style.removeProperty('--fz');
+    box.style.removeProperty('--fz-sm');
+    box.style.removeProperty('--fz-xs');
+    box.style.removeProperty('--fz-md');
+  } else {
+    // Все правила внутри #chatMessages построены на этих переменных,
+    // поэтому достаточно переопределить их локально.
+    // Производные размеры держим с теми же отступами, что в tokens.css:
+    //   --fz=13, --fz-md=12, --fz-sm=11, --fz-xs=10
+    box.style.setProperty('--fz',    px + 'px');
+    box.style.setProperty('--fz-md', Math.max(9, px - 1) + 'px');
+    box.style.setProperty('--fz-sm', Math.max(9, px - 2) + 'px');
+    box.style.setProperty('--fz-xs', Math.max(8, px - 3) + 'px');
+  }
+
+  const current = px ?? getCurrentFontSizePx();
+  const inc = $('chatFontInc');
+  const dec = $('chatFontDec');
+  if (inc) inc.disabled = current >= FONT_MAX;
+  if (dec) dec.disabled = current <= FONT_MIN;
+}
+
+
+function setChatFontSize(px) {
+  const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, px));
+  chatFontSize = clamped;
+  applyChatFontSize(clamped);
+  try {
+    localStorage.setItem(FONT_KEY, String(clamped));
+  } catch {}
+}
+
+
+function initChatFontSize() {
+  const stored = readStoredFontSize();
+  if (stored != null) {
+    chatFontSize = stored;
+    applyChatFontSize(stored);
+  } else {
+    chatFontSize = null;
+    applyChatFontSize(null);
+  }
+
+  const inc = $('chatFontInc');
+  const dec = $('chatFontDec');
+
+  if (inc) {
+    inc.addEventListener('click', () => {
+      const base = chatFontSize ?? getCurrentFontSizePx();
+      setChatFontSize(base + 1);
+    });
+  }
+  if (dec) {
+    dec.addEventListener('click', () => {
+      const base = chatFontSize ?? getCurrentFontSizePx();
+      setChatFontSize(base - 1);
+    });
+  }
 }

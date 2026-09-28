@@ -3,9 +3,11 @@
 .chat-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;              /* заполняет flex-родителя (.scene-tab-pane) */
+  height: 100%;         /* фолбэк для не-flex родителя */
   min-height: 0;
   position: relative;
+  overflow: hidden;     /* ничего не должно вылезать наружу */
 }
 .chat-panel.chat-drop-active {
   outline: 2px dashed var(--accent);
@@ -16,7 +18,7 @@
 /* шапка */
 .chat-header {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 4px;
   padding: 4px 0 6px;
   border-bottom: 1px solid var(--border);
@@ -40,10 +42,40 @@
   border-color: var(--accent);
 }
 
+/* ---------- A− / A+ (размер шрифта сообщений) ---------- */
+
+.chat-font-controls {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;      /* прижимает к левому краю шапки */
+}
+
+.chat-font-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--fg-3);
+  cursor: pointer;
+  padding: 1px 8px;
+  font-size: var(--fz-sm);
+  font-family: var(--font-mono);
+  border-radius: var(--r-sm);
+  line-height: 1.4;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+.chat-font-btn:hover:not(:disabled) {
+  background: var(--bg-4);
+  color: var(--fg-0);
+  border-color: var(--border-hi);
+}
+.chat-font-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* лента сообщений */
 .chat-messages {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 0;          /* явный basis: 0, чтобы контент не растягивал */
+  min-height: 0;        /* критично: иначе flex-элемент не сожмётся */
   overflow-y: auto;
   padding: var(--sp-3) var(--sp-1) var(--sp-2);
   display: flex;
@@ -87,6 +119,22 @@
   border-radius: var(--r-sm);
 }
 
+/* --- Выделение текста в чате ---
+   Перебиваем возможный глобальный user-select: none из base.css/utils.css.
+   Пользователь должен иметь возможность выделять фрагменты сообщений
+   (для копирования цитат, правок промпта и т.п.). */
+.chat-messages,
+.chat-msg,
+.chat-msg-head,
+.chat-msg-body,
+.chat-thinking-body,
+.chat-msg-error {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
 /* превьюшки картинок в сообщении */
 .chat-msg-images {
   display: flex;
@@ -106,6 +154,8 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  /* чтобы native drag картинки не рвал выделение текста рядом */
+  -webkit-user-drag: none;
 }
 
 /* thinking-спойлер */
@@ -120,7 +170,8 @@
   cursor: pointer;
   color: var(--fg-5);
   font-size: var(--fz-xs);
-  user-select: none;
+  user-select: none;     /* у summary — намеренно: клик по нему = тоггл */
+  -webkit-user-select: none;
 }
 .chat-thinking summary:hover {
   color: var(--fg-3);
@@ -145,7 +196,7 @@
 
 /* футер: аттачи + поле ввода */
 .chat-footer {
-  flex-shrink: 0;
+  flex-shrink: 0;        /* не сжимается — всегда прижат к низу панели */
   border-top: 1px solid var(--border);
   padding-top: var(--sp-2);
   display: flex;
@@ -171,6 +222,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  -webkit-user-drag: none;
 }
 .chat-attach-remove {
   position: absolute;

@@ -12,7 +12,7 @@ WS:
       {"type": "cancel"}
     Сервер → клиент:
       {"type": "start", "user_message": {...}}
-      {"type": "chunk", "text": "..."}
+      {"type": "chunk", "text": "...", "channel": "content"|"thinking"}
       {"type": "done",  "message": {...}}
       {"type": "cancelled"}
       {"type": "error", "error": "..."}
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
@@ -109,6 +110,17 @@ async def chat_ws(ws: WebSocket):
             pass
 
 
+def _persist_partial(scope, project, scene, text) -> None:
+    """Сохранить частичный ответ ассистента, чтобы он не терялся
+    при обрыве стрима / отмене."""
+    if not text or not text.strip():
+        return
+    try:
+        chat_mod.append_message(scope, "assistant", text, None, project, scene)
+    except Exception:
+        pass
+
+
 async def _handle_send(ws: WebSocket, msg: dict):
     scope = msg.get("scope") or "scene"
     project = msg.get("project")
@@ -121,27 +133,37 @@ async def _handle_send(ws: WebSocket, msg: dict):
         await ws.send_json({"type": "error", "error": "empty message"})
         return
 
-    try:
-        # Нормализуем картинки: chat_upload декодируем и сохраняем.
-        normalized = chat_mod.save_incoming_images(raw_images, project, scene)
+    full_text = ""   # доступен в except-ветках для partial-save
 
+    try:
+        normalized = chat_mod.save_incoming_images(raw_images, project, scene)
         history = chat_mod.load_history(scope, project, scene)
         user_msg = chat_mod.append_message(
             scope, "user", text, normalized, project, scene,
         )
-
         api_messages = chat_mod._history_to_api(
             history + [user_msg], project, scene,
         )
 
-        await ws.send_json({
-            "type": "start",
-            "user_message": user_msg,
-        })
+        await ws.send_json({"type": "start", "user_message": user_msg})
 
-        full_text = ""
+        # Выгрузить ComfyUI из VRAM перед чатом.
+        try:
+            import httpx
+            from config import get_comfy_url
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                await c.post(
+                    f"{get_comfy_url()}/free",
+                    json={"unload_models": True, "free_memory": True},
+                )
+        except Exception:
+            pass
+
+        conversation_id = f"sb-{uuid.uuid4().hex[:12]}"
         async for channel, piece in chat_mod.stream_completion(
-            api_messages, enable_thinking=enable_thinking,
+            api_messages,
+            conversation_id=conversation_id,
+            enable_thinking=enable_thinking,
         ):
             if channel == "content":
                 full_text += piece
@@ -151,9 +173,16 @@ async def _handle_send(ws: WebSocket, msg: dict):
                 "channel": channel,
             })
 
+        assistant_msg = chat_mod.append_message(
+            scope, "assistant", full_text, None, project, scene,
+        )
+        await ws.send_json({"type": "done", "message": assistant_msg})
+
     except asyncio.CancelledError:
+        _persist_partial(scope, project, scene, full_text)
         raise
     except Exception as e:
+        _persist_partial(scope, project, scene, full_text)
         try:
             await ws.send_json({"type": "error", "error": str(e)})
         except Exception:

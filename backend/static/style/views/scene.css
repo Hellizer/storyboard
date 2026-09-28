@@ -1,3 +1,42 @@
+/* ---------- элементы хедера, специфичные для сцены ----------
+   По умолчанию скрыты. Показываются, когда активен view сцены.
+   Так не нужно дёргать JS на каждый route-change. */
+
+.gh-scene-back,
+.gh-scene-title,
+.gh-scene-settings {
+  display: none;
+}
+
+body:has(#view-scene-gen.active) .gh-scene-back,
+body:has(#view-scene-gen.active) .gh-scene-settings {
+  display: inline-flex;
+  align-items: center;
+}
+
+body:has(#view-scene-gen.active) .gh-scene-title {
+  display: block;
+}
+
+/* заголовок сцены в хедере */
+.gh-scene-title {
+  font-size: var(--fz);
+  font-weight: normal;
+  color: var(--fg-1);
+  margin: 0;                        /* было: margin: 0 0 0 var(--sp-3); */
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--border);
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.gh-scene-back {
+  font-size: var(--fz-sm);
+}
+
 #view-scene-gen.view.active {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-"""Чат с LLM (llama-server, OpenAI-совместимый API).
+"""Чат с LLM (llama-server, OpenAI-совместимый API, router mode).
 
 Хранение истории по уровням:
 - global:    ~/.storyboard/chat.json
@@ -16,23 +16,97 @@
 При отправке в LLM бэк читает файлы, кодирует в base64, подставляет
 data-URL. Сами файлы в chat.json не дублируются.
 
-Клиент llama-server: POST /v1/chat/completions со stream=true (SSE).
-Thinking отключается через chat_template_kwargs.enable_thinking.
-Если включён — reasoning_content сливается в общий поток.
+Стриминг (SSE):
+- POST /v1/chat/completions со stream=true, header X-Conversation-Id.
+- НИКАКИХ idle-таймаутов на чтение. Пока llama-server считает
+  промпт-процессинг (10+ сек на 1656 токенов), сокет молчит — и это
+  нормально, а не повод рвать соединение.
+- При обрыве соединения (RST/FIN от ОС) делаем POST /v1/streams/lookup:
+  - стрим завершён → выходим;
+  - стрим жив → GET /v1/stream?conv_id=X&from=N и продолжаем читать
+    с байта N (сервер буферизирует SSE-ответ по conversation_id);
+  - lookup не отвечает → пробуем резюм один раз, потом сдаёмся.
+- Позиция N инкрементируется по каждой полной SSE-строке (включая
+  комментарии и пустые строки), чтобы резюм стартовал с границы
+  события, а не в середине line.
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import time
 import uuid
 from pathlib import Path
 from typing import AsyncIterator
+from urllib.parse import quote
 
+import aiohttp
 import httpx
 
 from config import PROJECTS_DIR, USER_DIR, get_llama_url
+
+
+# ---------- llama-server (router mode) ----------
+
+_models_cache: list[dict] = []
+_models_cache_ts: float = 0.0
+_MODELS_CACHE_TTL = 5.0
+
+
+async def list_models(force: bool = False) -> list[dict]:
+    """Список моделей из router mode. Кеш на 5 секунд."""
+    global _models_cache, _models_cache_ts
+    now = time.time()
+    if not force and _models_cache and (now - _models_cache_ts) < _MODELS_CACHE_TTL:
+        return _models_cache
+
+    base = get_llama_url().rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{base}/models")
+            r.raise_for_status()
+            data = r.json().get("data") or []
+    except Exception as e:
+        print(f"[chat] /models failed: {e}")
+        return _models_cache
+
+    _models_cache = data
+    _models_cache_ts = now
+    return data
+
+
+async def get_active_model_id() -> str | None:
+    """Id первой доступной модели (router mode возвращает ровно одну)."""
+    models = await list_models()
+    if not models:
+        return None
+    return models[0].get("id")
+
+
+async def unload_model() -> bool:
+    """POST /models/unload — выгружает модель из VRAM, процесс жив."""
+    model_id = await get_active_model_id()
+    if not model_id:
+        return False
+
+    base = get_llama_url().rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{base}/models/unload",
+                json={"model": model_id},
+            )
+            global _models_cache_ts
+            _models_cache_ts = 0.0
+            if r.status_code in (200, 400, 404):
+                return True
+            print(f"[chat] unload {r.status_code}: {r.text[:200]}")
+            return False
+    except Exception as e:
+        print(f"[chat] unload failed: {e}")
+        return False
 
 
 # ---------- пути ----------
@@ -150,7 +224,6 @@ def _encode_file(path: Path) -> str | None:
 
 
 def _parse_data_url(data_url: str) -> tuple[bytes, str] | None:
-    """'data:image/png;base64,...' → (bytes, 'png') или None."""
     if not data_url or not data_url.startswith("data:"):
         return None
     try:
@@ -160,7 +233,7 @@ def _parse_data_url(data_url: str) -> tuple[bytes, str] | None:
     if ";base64" not in header:
         return None
     try:
-        mime = header[5:].split(";")[0]  # 'image/png'
+        mime = header[5:].split(";")[0]
         ext = mime.split("/", 1)[1].lower()
         if ext == "jpeg":
             ext = "jpg"
@@ -175,7 +248,6 @@ def _image_path(
     project: str | None,
     scene: str | None,
 ) -> Path | None:
-    """Найти физический файл картинки по элементу из messages."""
     if not project or not scene:
         return None
     kind = item.get("kind")
@@ -198,8 +270,7 @@ def save_incoming_images(
     """Нормализовать список картинок из запроса.
 
     scene_image  → оставить как есть.
-    chat_upload  → декодировать base64 и сохранить файл, вернуть
-                   {"kind": "chat_upload", "name": "<uuid>.png"}.
+    chat_upload  → декодировать base64 и сохранить файл.
     """
     result: list[dict] = []
     for item in incoming or []:
@@ -237,11 +308,6 @@ def _build_user_content(
     project: str | None,
     scene: str | None,
 ) -> list[dict] | str:
-    """Собрать content для user-сообщения.
-
-    Без картинок — просто строка.
-    С картинками — список блоков (text + image_url).
-    """
     if not images:
         return text
 
@@ -260,13 +326,10 @@ def _build_user_content(
                 "image_url": {"url": url},
             })
 
-    # Если ни одна картинка не подгрузилась — отдаём просто текст.
     if not blocks or (len(blocks) == 1 and blocks[0].get("type") == "text"):
         return text
     return blocks
 
-
-# ---------- LLM client ----------
 
 def _history_to_api(
     messages: list[dict],
@@ -286,58 +349,223 @@ def _history_to_api(
     return out
 
 
+# ---------- streaming ----------
+
+async def check_stream_done(stream_identity: str) -> bool | None:
+    """Спросить у router'а, жив ли стрим по conversation_id.
+
+    Возвращает:
+      False — стрим ещё идёт (is_done=false), можно резюмить;
+      True  — стрим завершён на сервере;
+      None  — не удалось узнать (endpoint молчит, ошибка, пустой ответ).
+    """
+    base = get_llama_url().rstrip("/")
+    url = f"{base}/v1/streams/lookup"
+    payload = {"conversation_ids": [stream_identity]}
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.post(url, json=payload)
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            if not isinstance(data, list) or not data:
+                return None
+            cid_base = stream_identity.split("::", 1)[0]
+            for item in data:
+                cid = item.get("conversation_id") or ""
+                if cid == stream_identity or cid.split("::", 1)[0] == cid_base:
+                    return bool(item.get("is_done"))
+            return None
+    except Exception:
+        return None
+
+
+async def _iter_sse(
+    content: aiohttp.StreamReader,
+) -> AsyncIterator[tuple]:
+    """Разобрать SSE-поток в события.
+
+    Yield'ит кортежи:
+      ("bytes", n)         — прочитано n байт (полная SSE-строка),
+      ("content", text)    — дельта обычного контента,
+      ("thinking", text)   — дельта reasoning_content,
+      ("done",)            — finish_reason или [DONE].
+
+    Позиция "bytes" инкрементируется по каждой ПОЛНОЙ строке — включая
+    пустые и комментарии. Это делает резюм через ?from=N безопасным:
+    N всегда указывает на границу строки, а не в середину.
+    """
+    while True:
+        try:
+            line_bytes = await content.readline()
+        except (aiohttp.ClientError, ConnectionError, OSError):
+            return
+
+        if not line_bytes:
+            # EOF — соединение закрыто.
+            return
+
+        line = line_bytes.decode("utf-8", errors="replace").rstrip("\r\n")
+
+        # События этой строки (если есть) — выпускаем ДО "bytes",
+        # чтобы при резюме повтор был, а не потеря.
+        if line and not line.startswith(":"):
+            if line.startswith("data:"):
+                chunk = line[5:].strip()
+                if chunk == "[DONE]":
+                    yield ("bytes", len(line_bytes))
+                    yield ("done",)
+                    return
+
+                try:
+                    obj = json.loads(chunk)
+                except json.JSONDecodeError:
+                    obj = None
+
+                if obj is not None:
+                    try:
+                        choice = obj["choices"][0]
+                    except (KeyError, IndexError, TypeError):
+                        choice = None
+
+                    if choice is not None:
+                        delta = choice.get("delta") or {}
+                        text = delta.get("content") or ""
+                        reasoning = delta.get("reasoning_content") or ""
+
+                        if text:
+                            yield ("content", text)
+                        if reasoning:
+                            yield ("thinking", reasoning)
+
+                        if choice.get("finish_reason"):
+                            yield ("bytes", len(line_bytes))
+                            yield ("done",)
+                            return
+
+        # Строка отработана — фиксируем позицию.
+        yield ("bytes", len(line_bytes))
+
+
+def _build_resume_url(base: str, stream_identity: str, from_byte: int) -> str:
+    return (
+        f"{base}/v1/stream"
+        f"?conv_id={quote(stream_identity, safe='')}&from={int(from_byte)}"
+    )
+
+
 async def stream_completion(
     messages: list[dict],
     *,
+    conversation_id: str,
     temperature: float = 0.9,
     max_tokens: int = 1024,
     enable_thinking: bool = False,
 ) -> AsyncIterator[tuple[str, str]]:
-    """Отправить в llama-server, вернуть чанки (channel, text).
+    model_id = await get_active_model_id()
+    if not model_id:
+        raise RuntimeError("llama-server: no models available")
 
-    channel = "content"  — обычный ответ.
-    channel = "thinking" — reasoning_content (только при enable_thinking).
-    """
     base = get_llama_url().rstrip("/")
-    url = f"{base}/v1/chat/completions"
+    stream_identity = f"{conversation_id}::{model_id}"
 
     payload = {
-        "model": "llama",
+        "model": model_id,
         "messages": messages,
         "stream": True,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "sse_ping_interval": 1,
         "chat_template_kwargs": {"enable_thinking": bool(enable_thinking)},
     }
+    headers = {"X-Conversation-Id": stream_identity}
 
-    timeout = httpx.Timeout(600.0, connect=10.0)
+    # НИКАКИХ idle-таймаутов на чтение. Пока llama-server считает
+    # промпт-процессинг, сокет молчит — ждём. Мёртвое соединение убьёт
+    # сам TCP (RST/FIN), и мы это поймаем как ClientError.
+    timeout = aiohttp.ClientTimeout(
+        total=None,
+        sock_connect=120.0,
+        sock_read=None,
+    )
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        async with client.stream("POST", url, json=payload) as r:
-            if r.status_code != 200:
-                body = (await r.aread()).decode("utf-8", errors="replace")
-                raise RuntimeError(f"llama-server {r.status_code}: {body[:300]}")
+    bytes_received = 0
+    attempt = 0
 
-            async for line in r.aiter_lines():
-                if not line or not line.startswith("data:"):
-                    continue
-                chunk = line[5:].strip()
-                if chunk == "[DONE]":
-                    break
-                try:
-                    obj = json.loads(chunk)
-                except json.JSONDecodeError:
-                    continue
-                try:
-                    delta = obj["choices"][0]["delta"]
-                except (KeyError, IndexError, TypeError):
-                    continue
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        while True:
+            attempt += 1
+            got_bytes = False
 
-                content = delta.get("content") or ""
-                if content:
-                    yield ("content", content)
+            try:
+                if attempt == 1:
+                    req = session.post(
+                        f"{base}/v1/chat/completions",
+                        json=payload,
+                        headers=headers,
+                    )
+                else:
+                    resume_url = _build_resume_url(
+                        base, stream_identity, bytes_received,
+                    )
+                    req = session.get(resume_url, headers=headers)
 
-                if enable_thinking:
-                    reasoning = delta.get("reasoning_content") or ""
-                    if reasoning:
-                        yield ("thinking", reasoning)
+                async with req as resp:
+                    if resp.status != 200:
+                        body = await resp.text()
+                        if attempt == 1:
+                            raise RuntimeError(
+                                f"llama-server {resp.status}: {body[:300]}"
+                            )
+                        # Резюм не удался — выходим тихо, что успели, уже отдали.
+                        print(f"[chat] resume HTTP {resp.status}: {body[:200]}")
+                        return
+
+                    async for event in _iter_sse(resp.content):
+                        kind = event[0]
+
+                        if kind == "bytes":
+                            bytes_received += event[1]
+                            got_bytes = True
+                        elif kind == "done":
+                            return
+                        elif kind == "content":
+                            yield ("content", event[1])
+                        elif kind == "thinking":
+                            if enable_thinking:
+                                yield ("thinking", event[1])
+
+            except (aiohttp.ClientError, ConnectionError, OSError) as e:
+                # Соединение умерло. Это не "таймаут", это RST/FIN от ОС —
+                # TCP сам сообщил, что стрим порван.
+                print(f"[chat] stream attempt #{attempt} interrupted: {e}")
+            except RuntimeError:
+                # Ошибка первого запроса — не глушим, пробрасываем.
+                raise
+
+            # Сюда попадаем после EOF или разрыва.
+            if attempt > 1 and not got_bytes:
+                print("[chat] resume produced no new bytes, giving up")
+                return
+
+            # Жив ли стрим на сервере?
+            status = await check_stream_done(stream_identity)
+
+            if status is True:
+                # Стрим завершён на сервере — дочитывать нечего.
+                return
+
+            if status is None:
+                # Lookup молчит. Первый обрыв — попробуем резюм вслепую
+                # один раз. Повторный обрыв с неудачным lookup — сдаёмся.
+                if attempt > 1:
+                    return
+
+            # status is False  → стрим жив, резюмим с bytes_received.
+            # status is None и attempt == 1 → пробуем вслепую.
+            print(
+                f"[chat] resuming stream from byte {bytes_received} "
+                f"(attempt #{attempt})"
+            )
+            continue

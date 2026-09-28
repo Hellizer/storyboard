@@ -222,6 +222,21 @@ class QueueManager:
             await self._finish_active()
             return
 
+        # Перед генерацией — освободить VRAM от LLM (если загружена)
+        try:
+            import chat as _chat
+            await _chat.unload_model()
+        except Exception as e:
+            print(f"[queue] не удалось выгрузить LLM: {e}")
+
+        # Освобождаем VRAM от LLM (если загружена), прежде чем отдавать
+        # GPU под ComfyUI. Ошибки игнорируем — если ламы нет, ничего не сломается.
+        try:
+            import chat as _chat
+            await _chat.unload_model()
+        except Exception as e:
+            print(f"[queue] не удалось выгрузить LLM: {e}")
+
         # Отправляем в ComfyUI
         try:
             resp = await comfy.submit(workflow)
@@ -393,5 +408,5 @@ class QueueManager:
                 json.dumps(project, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            
+
 queue = QueueManager()

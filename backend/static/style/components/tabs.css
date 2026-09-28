@@ -23,19 +23,27 @@
   border-bottom-color: var(--accent);
 }
 
+/* Контейнер под панели табов. Делаем его flex-колонкой,
+   чтобы .scene-tab-pane.active мог получить flex: 1 и ограниченную высоту. */
 .scene-tab-content {
   flex: 1;
   min-height: 0;
   position: relative;
+  display: flex;             /* ключевое */
+  flex-direction: column;    /* ключевое */
 }
 
 .scene-tab-pane {
   display: none;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;             /* чтобы вложенные flex-элементы могли сжиматься */
   overflow: hidden;
 }
-.scene-tab-pane.active { display: flex; }
+.scene-tab-pane.active {
+  display: flex;
+  flex: 1;                   /* вместо height: 100% — заполняет flex-родителя */
+  min-height: 0;
+}
 
 /* Заглушки табов */
 .tab-placeholder {

@@ -10,6 +10,10 @@
     <header id="globalHeader" class="global-header">
       <div class="gh-left">
         <span class="gh-logo">HR-MoA</span>
+
+        <!-- видны только на экране сцены (см. scene.css) -->
+        <button class="icon-btn gh-scene-back" id="btnGenBackToGraph">← К графу</button>
+        <h1 class="gh-scene-title" id="genSceneTitle">...</h1>
       </div>
 
       <div class="gh-center">
@@ -20,9 +24,10 @@
         </button>
       </div>
 
-      <div class="gh-right"></div>
+      <div class="gh-right">
+        <button class="icon-btn gh-scene-settings" id="btnTogglePanel" title="Панель настроек (Ctrl+P)">☰</button>
+      </div>
     </header>
-
     <!-- ==================== ПАНЕЛЬ ОЧЕРЕДИ (выпадающая) ==================== -->
     <div id="queuePanel" class="queue-panel hidden">
         <div class="queue-header">
@@ -71,11 +76,6 @@
 <!-- ==================== ЭКРАН: ГЕНЕРАЦИЯ СЦЕНЫ ==================== -->
 <div id="view-scene-gen" class="view">
 
-  <div class="topbar">
-    <button class="icon-btn" id="btnGenBackToGraph">← К графу</button>
-    <h1 id="genSceneTitle">...</h1>
-    <button class="icon-btn" id="btnTogglePanel" title="Панель настроек (Ctrl+P)">☰</button>
-  </div>
 
   <div class="scene-description-bar" id="genSceneDescriptionBar">
     <div class="scene-description-label">Описание сцены</div>
@@ -127,10 +127,14 @@
 
             <div class="scene-tab-pane" data-tab="chat">
               <div class="chat-panel" id="chatPanel">
-                <div class="chat-header">
-                  <button class="icon-btn" id="chatHeaderThinking" title="Думать (reasoning)">🧠</button>
-                  <button class="icon-btn" id="chatHeaderClear" title="Очистить чат">🗑</button>
-                </div>
+                  <div class="chat-header">
+                    <div class="chat-font-controls">
+                      <button type="button" class="chat-font-btn" id="chatFontDec" title="Меньше">A−</button>
+                      <button type="button" class="chat-font-btn" id="chatFontInc" title="Больше">A+</button>
+                    </div>
+                    <button class="icon-btn" id="chatHeaderThinking" title="Думать (reasoning)">🧠</button>
+                    <button class="icon-btn" id="chatHeaderClear" title="Очистить чат">🗑</button>
+                  </div>
 
                 <div class="chat-messages" id="chatMessages"></div>
 
